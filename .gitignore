@@ -1,0 +1,22 @@
+# common build directory
+build
+*-build-*
+
+# Python cache
+__pycache__
+venv
+
+cmake-build-debug
+
+.cache
+docs/html
+docs/theme
+
+# Generated using only the Github workflow
+benchmark_result.json
+
+singleheader/lexer.h
+singleheader/lexer.cpp
+
+#ignore VScode
+.vscode/

@@ -1,0 +1,30 @@
+set(LEXER_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../)
+if(MSVC)
+  add_compile_options("/Zi" "/EHsc" "/GR")
+  add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+  add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+endif()
+
+include(${PROJECT_SOURCE_DIR}/cmake/add-cpp-test.cmake)
+link_libraries(lexer)
+
+if(MSVC AND BUILD_SHARED_LIBS)
+  message(STATUS "For some tests we use Google Test and it fails when building a DLL.")
+  message(STATUS "Thus the tests are disabled. Sorry.")
+else()
+  include(GoogleTest)
+  add_executable(real_world_tests real_world_tests.cpp)
+  target_link_libraries(real_world_tests PRIVATE GTest::gtest_main)
+  gtest_discover_tests(real_world_tests)
+
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+      target_link_libraries(real_world_tests PUBLIC stdc++fs)
+    endif()
+  endif()
+
+  if(MSVC OR MINGW)
+    target_compile_definitions(real_world_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+  endif()
+
+endif()
