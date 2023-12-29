@@ -7,13 +7,36 @@
 
 namespace lexer {
 
-  struct lexer_result {
-    std::vector<std::string_view> exports;
-    std::vector<std::string_view> re_exports;
+  enum lexer_error {
+    // remove this error when implementation is complete
+    TODO,
+    // syntax errors
+    UNEXPECTED_PAREN,
+    UNEXPECTED_BRACE,
+    UNTERMINATED_PAREN,
+    UNTERMINATED_BRACE,
+    UNTERMINATED_TEMPLATE_STRING,
+    UNTERMINATED_STRING_LITERAL,
+    UNTERMINATED_REGEX_CHARACTER_CLASS,
+    UNTERMINATED_REGEX,
+
+    // ESM syntax errors
+    UNEXPECTED_ESM_IMPORT_META,
+    UNEXPECTED_ESM_IMPORT,
+    UNEXPECTED_ESM_EXPORT,
+
+    // overflows
+    // todo - we need to extend overflow checks to all data types
+    TEMPLATE_NEST_OVERFLOW,
   };
 
-  std::optional<lexer_result> parse_commonjs(std::string_view file_contents);
+  struct lexer_analysis {
+    std::vector<std::string> exports;
+    std::vector<std::string> re_exports;
+  };
 
+  std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents);
+  std::optional<lexer_error> get_last_error();
 }
 
 #endif  // LEXER_PARSER_H
