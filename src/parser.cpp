@@ -1180,7 +1180,8 @@ private:
         pos++;
         ch = commentWhitespace();
         // Early check: first character must be 'm', then verify remaining characters
-        // pos + 4 <= end allows reading pos[0..3]
+        // Bounds check: pos + 4 <= end is equivalent to pos + 3 < end, which ensures
+        // we can safely read pos[0], pos[1], pos[2], pos[3] for the 'meta' check
         if (ch == 'm' && pos + 4 <= end && str_eq3(pos + 1, 'e', 't', 'a')) {
           // Check that 'meta' is not followed by an identifier character
           // If we're at end of string, that's OK - it's import.meta
