@@ -1,0 +1,5 @@
+if(EXISTS "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/tests/real_world_tests[1]_tests.cmake")
+  include("/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/tests/real_world_tests[1]_tests.cmake")
+else()
+  add_test(real_world_tests_NOT_BUILT real_world_tests_NOT_BUILT)
+endif()

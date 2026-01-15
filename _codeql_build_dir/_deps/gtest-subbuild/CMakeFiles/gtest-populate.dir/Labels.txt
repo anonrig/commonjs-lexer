@@ -1,0 +1,14 @@
+# Target labels
+ gtest-populate
+# Source files and their labels
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/CMakeFiles/gtest-populate
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/CMakeFiles/gtest-populate.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/CMakeFiles/gtest-populate-complete.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-build.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-configure.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-download.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-install.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-mkdir.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-patch.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-test.rule
+/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/gtest-populate-prefix/src/gtest-populate-stamp/gtest-populate-update.rule

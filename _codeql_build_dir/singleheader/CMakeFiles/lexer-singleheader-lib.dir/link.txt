@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblexer-singleheader-lib.a "CMakeFiles/lexer-singleheader-lib.dir/lexer.cpp.o"
+/usr/bin/ranlib liblexer-singleheader-lib.a
