@@ -1176,7 +1176,22 @@ private:
         openTokenPosStack_[openTokenDepth++] = startPos;
         return;
       case '.':
-        syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT_META);
+        // Check if followed by 'meta' (possibly with whitespace)
+        pos++;
+        ch = commentWhitespace();
+        if (ch == 'm' && pos + 3 < end && 
+            pos[0] == 'm' && pos[1] == 'e' && pos[2] == 't' && pos[3] == 'a') {
+          // Check that 'meta' is not followed by an identifier character
+          if (pos + 4 < end) {
+            char next = pos[4];
+            if ((next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') ||
+                (next >= '0' && next <= '9') || next == '_' || next == '$') {
+              // It's something like import.metaData, not import.meta
+              return;
+            }
+          }
+          syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT_META);
+        }
         return;
       default:
         if (pos == startPos + 6)
