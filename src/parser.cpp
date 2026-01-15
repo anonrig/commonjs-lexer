@@ -472,8 +472,7 @@ private:
         ch = commentWhitespace();
         
         // Check if this is a getter syntax: get identifier()
-        if (ch != ':' && endPos - startPos == 3 && 
-            startPos[0] == 'g' && startPos[1] == 'e' && startPos[2] == 't') {
+        if (ch != ':' && endPos - startPos == 3 && str_eq3(startPos, 'g', 'e', 't')) {
           // Skip getter: get identifier() { ... }
           if (identifier(ch)) {
             ch = commentWhitespace();
@@ -1209,19 +1208,12 @@ private:
         // Check if followed by 'meta' (possibly with whitespace)
         pos++;
         ch = commentWhitespace();
-        // Early check: first character must be 'm', then verify remaining characters
-        // Bounds check: pos + 4 <= end is equivalent to pos + 3 < end, which ensures
-        // we can safely read pos[0], pos[1], pos[2], pos[3] for the 'meta' check
+        // Use str_eq4 for more efficient comparison
         if (ch == 'm' && pos + 4 <= end && str_eq3(pos + 1, 'e', 't', 'a')) {
           // Check that 'meta' is not followed by an identifier character
-          // If we're at end of string, that's OK - it's import.meta
-          if (pos + 4 < end) {
-            char next = pos[4];
-            if ((next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') ||
-                (next >= '0' && next <= '9') || next == '_' || next == '$') {
-              // It's something like import.metaData, not import.meta
-              return;
-            }
+          if (pos + 4 < end && isIdentifierChar(static_cast<uint8_t>(pos[4]))) {
+            // It's something like import.metaData, not import.meta
+            return;
           }
           syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT_META);
         }
