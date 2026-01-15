@@ -80,7 +80,14 @@ private:
            ch == '[' || ch == '^' || (ch > 122 && ch < 127 && ch != '}');
   }
 
-  // String comparison helpers
+  // String comparison helpers using string_view for cleaner, more maintainable code
+  bool matchesAt(const char* p, const char* end_pos, std::string_view expected) const {
+    size_t available = end_pos - p;
+    if (available < expected.size()) return false;
+    return std::string_view(p, expected.size()) == expected;
+  }
+  
+  // Legacy compatibility - will be removed after full migration
   static bool str_eq2(const char* p, char c1, char c2) {
     return p[0] == c1 && p[1] == c2;
   }
