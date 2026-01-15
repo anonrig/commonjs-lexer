@@ -86,51 +86,6 @@ private:
     if (available < expected.size()) return false;
     return std::string_view(p, expected.size()) == expected;
   }
-  
-  // Legacy compatibility - will be removed after full migration
-  static bool str_eq2(const char* p, char c1, char c2) {
-    return p[0] == c1 && p[1] == c2;
-  }
-
-  static bool str_eq3(const char* p, char c1, char c2, char c3) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3;
-  }
-
-  static bool str_eq4(const char* p, char c1, char c2, char c3, char c4) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4;
-  }
-
-  static bool str_eq5(const char* p, char c1, char c2, char c3, char c4, char c5) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5;
-  }
-
-  static bool str_eq6(const char* p, char c1, char c2, char c3, char c4, char c5, char c6) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5 && p[5] == c6;
-  }
-
-  static bool str_eq7(const char* p, char c1, char c2, char c3, char c4, char c5, char c6, char c7) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5 && p[5] == c6 && p[6] == c7;
-  }
-
-  static bool str_eq8(const char* p, char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5 && p[5] == c6 && p[6] == c7 && p[7] == c8;
-  }
-
-  static bool str_eq9(const char* p, char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5 && p[5] == c6 && p[6] == c7 && p[7] == c8 && p[8] == c9;
-  }
-
-  static bool str_eq10(const char* p, char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, char c10) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5 && p[5] == c6 && p[6] == c7 && p[7] == c8 && p[8] == c9 && p[9] == c10;
-  }
-
-  static bool str_eq13(const char* p, char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, char c10, char c11, char c12, char c13) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5 && p[5] == c6 && p[6] == c7 && p[7] == c8 && p[8] == c9 && p[9] == c10 && p[10] == c11 && p[11] == c12 && p[12] == c13;
-  }
-
-  static bool str_eq22(const char* p, char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, char c10, char c11, char c12, char c13, char c14, char c15, char c16, char c17, char c18, char c19, char c20, char c21, char c22) {
-    return p[0] == c1 && p[1] == c2 && p[2] == c3 && p[3] == c4 && p[4] == c5 && p[5] == c6 && p[6] == c7 && p[7] == c8 && p[8] == c9 && p[9] == c10 && p[10] == c11 && p[11] == c12 && p[12] == c13 && p[13] == c14 && p[14] == c15 && p[15] == c16 && p[16] == c17 && p[17] == c18 && p[18] == c19 && p[19] == c20 && p[20] == c21 && p[21] == c22;
-  }
 
   // Character type detection - simplified for ASCII/UTF-8
   static bool isIdentifierStart(uint8_t ch) {
@@ -146,34 +101,40 @@ private:
     return p == source || isBrOrWsOrPunctuatorNotDot(*(p - 1));
   }
 
-  bool readPrecedingKeyword2(const char* p, char c1, char c2) const {
-    if (p - 1 < source) return false;
-    return str_eq2(p - 1, c1, c2) && (p - 1 == source || isBrOrWsOrPunctuatorNotDot(*(p - 2)));
+  bool readPrecedingKeyword2(const char* p, std::string_view keyword) const {
+    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
+    const char* start = p - keyword.size() + 1;
+    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
   }
 
-  bool readPrecedingKeyword3(const char* p, char c1, char c2, char c3) const {
-    if (p - 2 < source) return false;
-    return str_eq3(p - 2, c1, c2, c3) && (p - 2 == source || isBrOrWsOrPunctuatorNotDot(*(p - 3)));
+  bool readPrecedingKeyword3(const char* p, std::string_view keyword) const {
+    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
+    const char* start = p - keyword.size() + 1;
+    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
   }
 
-  bool readPrecedingKeyword4(const char* p, char c1, char c2, char c3, char c4) const {
-    if (p - 3 < source) return false;
-    return str_eq4(p - 3, c1, c2, c3, c4) && (p - 3 == source || isBrOrWsOrPunctuatorNotDot(*(p - 4)));
+  bool readPrecedingKeyword4(const char* p, std::string_view keyword) const {
+    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
+    const char* start = p - keyword.size() + 1;
+    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
   }
 
-  bool readPrecedingKeyword5(const char* p, char c1, char c2, char c3, char c4, char c5) const {
-    if (p - 4 < source) return false;
-    return str_eq5(p - 4, c1, c2, c3, c4, c5) && (p - 4 == source || isBrOrWsOrPunctuatorNotDot(*(p - 5)));
+  bool readPrecedingKeyword5(const char* p, std::string_view keyword) const {
+    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
+    const char* start = p - keyword.size() + 1;
+    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
   }
 
-  bool readPrecedingKeyword6(const char* p, char c1, char c2, char c3, char c4, char c5, char c6) const {
-    if (p - 5 < source) return false;
-    return str_eq6(p - 5, c1, c2, c3, c4, c5, c6) && (p - 5 == source || isBrOrWsOrPunctuatorNotDot(*(p - 6)));
+  bool readPrecedingKeyword6(const char* p, std::string_view keyword) const {
+    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
+    const char* start = p - keyword.size() + 1;
+    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
   }
 
-  bool readPrecedingKeyword7(const char* p, char c1, char c2, char c3, char c4, char c5, char c6, char c7) const {
-    if (p - 6 < source) return false;
-    return str_eq7(p - 6, c1, c2, c3, c4, c5, c6, c7) && (p - 6 == source || isBrOrWsOrPunctuatorNotDot(*(p - 7)));
+  bool readPrecedingKeyword7(const char* p, std::string_view keyword) const {
+    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
+    const char* start = p - keyword.size() + 1;
+    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
   }
 
   // Keyword detection
@@ -182,9 +143,9 @@ private:
       case 'd':
         switch (*(p - 1)) {
           case 'i':
-            return readPrecedingKeyword2(p - 2, 'v', 'o');
+            return readPrecedingKeyword2(p - 2, "vo");
           case 'l':
-            return readPrecedingKeyword3(p - 2, 'y', 'i', 'e');
+            return readPrecedingKeyword3(p - 2, "yie");
           default:
             return false;
         }
@@ -200,7 +161,7 @@ private:
                 return false;
             }
           case 't':
-            return readPrecedingKeyword4(p - 2, 'd', 'e', 'l', 'e');
+            return readPrecedingKeyword4(p - 2, "dele");
           default:
             return false;
         }
@@ -209,27 +170,27 @@ private:
           return false;
         switch (*(p - 3)) {
           case 'c':
-            return readPrecedingKeyword6(p - 4, 'i', 'n', 's', 't', 'a', 'n');
+            return readPrecedingKeyword6(p - 4, "instan");
           case 'p':
-            return readPrecedingKeyword2(p - 4, 't', 'y');
+            return readPrecedingKeyword2(p - 4, "ty");
           default:
             return false;
         }
       case 'n':
         return (p - 1 >= source && *(p - 1) == 'i' && keywordStart(p - 1)) ||
-               readPrecedingKeyword5(p - 1, 'r', 'e', 't', 'u', 'r');
+               readPrecedingKeyword5(p - 1, "retur");
       case 'o':
         return p - 1 >= source && *(p - 1) == 'd' && keywordStart(p - 1);
       case 'r':
-        return readPrecedingKeyword7(p - 1, 'd', 'e', 'b', 'u', 'g', 'g', 'e');
+        return readPrecedingKeyword7(p - 1, "debugge");
       case 't':
-        return readPrecedingKeyword4(p - 1, 'a', 'w', 'a', 'i');
+        return readPrecedingKeyword4(p - 1, "awai");
       case 'w':
         switch (*(p - 1)) {
           case 'e':
             return p - 2 >= source && *(p - 2) == 'n' && keywordStart(p - 2);
           case 'o':
-            return readPrecedingKeyword3(p - 2, 't', 'h', 'r');
+            return readPrecedingKeyword3(p - 2, "thr");
           default:
             return false;
         }
@@ -238,9 +199,9 @@ private:
   }
 
   bool isParenKeyword(const char* curPos) const {
-    return readPrecedingKeyword5(curPos, 'w', 'h', 'i', 'l', 'e') ||
-           readPrecedingKeyword3(curPos, 'f', 'o', 'r') ||
-           readPrecedingKeyword2(curPos, 'i', 'f');
+    return readPrecedingKeyword5(curPos, "while") ||
+           readPrecedingKeyword3(curPos, "for") ||
+           readPrecedingKeyword2(curPos, "if");
   }
 
   bool isExpressionTerminator(const char* curPos) const {
@@ -251,11 +212,11 @@ private:
       case ')':
         return true;
       case 'h':
-        return readPrecedingKeyword4(curPos - 1, 'c', 'a', 't', 'c');
+        return readPrecedingKeyword4(curPos - 1, "catc");
       case 'y':
-        return readPrecedingKeyword6(curPos - 1, 'f', 'i', 'n', 'a', 'l', 'l');
+        return readPrecedingKeyword6(curPos - 1, "finall");
       case 'e':
-        return readPrecedingKeyword3(curPos - 1, 'e', 'l', 's');
+        return readPrecedingKeyword3(curPos - 1, "els");
     }
     return false;
   }
@@ -300,7 +261,7 @@ private:
     pos++;
     while (pos++ < end) {
       char ch = *pos;
-      if (ch == '*' && pos + 1 < end && *(pos + 1) == '/') {
+      if (ch == '*' && *(pos + 1) == '/') {
         pos++;
         return;
       }
@@ -315,7 +276,7 @@ private:
       if (ch == '\\') {
         if (pos + 1 >= end) break;
         ch = *++pos;
-        if (ch == '\r' && pos + 1 < end && *(pos + 1) == '\n')
+        if (ch == '\r' && *(pos + 1) == '\n')
           pos++;
       } else if (isBr(ch))
         break;
@@ -356,7 +317,7 @@ private:
   void templateString() {
     while (pos++ < end) {
       char ch = *pos;
-      if (ch == '$' && pos + 1 < end && *(pos + 1) == '{') {
+      if (ch == '$' && *(pos + 1) == '{') {
         pos++;
         if (templateStackDepth >= STACK_DEPTH) {
           syntaxError(lexer_error::TEMPLATE_NEST_OVERFLOW);
@@ -437,7 +398,7 @@ private:
 
   bool readExportsOrModuleDotExports(char ch) {
     const char* revertPos = pos;
-    if (ch == 'm' && pos + 6 < end && str_eq5(pos + 1, 'o', 'd', 'u', 'l', 'e')) {
+    if (ch == 'm' && matchesAt(pos + 1, end, "odule")) {
       pos += 6;
       ch = commentWhitespace();
       if (ch != '.') {
@@ -447,7 +408,7 @@ private:
       pos++;
       ch = commentWhitespace();
     }
-    if (ch == 'e' && pos + 7 < end && str_eq6(pos + 1, 'x', 'p', 'o', 'r', 't', 's')) {
+    if (ch == 'e' && matchesAt(pos + 1, end, "xports")) {
       pos += 7;
       return true;
     }
@@ -457,7 +418,7 @@ private:
 
   bool tryParseRequire(RequireType requireType) {
     const char* revertPos = pos;
-    if (pos + 7 >= end || !str_eq6(pos + 1, 'e', 'q', 'u', 'i', 'r', 'e')) {
+    if (!matchesAt(pos + 1, end, "equire")) {
       return false;
     }
     pos += 7;
@@ -513,7 +474,7 @@ private:
         ch = commentWhitespace();
         
         // Check if this is a getter syntax: get identifier()
-        if (ch != ':' && endPos - startPos == 3 && str_eq3(startPos, 'g', 'e', 't')) {
+        if (ch != ':' && endPos - startPos == 3 && matchesAt(startPos, end, "get")) {
           // Skip getter: get identifier() { ... }
           if (identifier(ch)) {
             ch = commentWhitespace();
@@ -551,7 +512,7 @@ private:
           }
           addExport(start, end_pos);
         }
-      } else if (ch == '.' && pos + 2 < end && str_eq2(pos + 1, '.', '.')) {
+      } else if (ch == '.' && matchesAt(pos + 1, end, "..")) {
         pos += 3;
         if (pos < end && *pos == 'r' && tryParseRequire(RequireType::ExportAssign)) {
           pos++;
@@ -635,7 +596,7 @@ private:
     if (ch == '.') {
       pos++;
       ch = commentWhitespace();
-      if (ch == 'e' && pos + 7 < end && str_eq6(pos + 1, 'x', 'p', 'o', 'r', 't', 's')) {
+      if (ch == 'e' && matchesAt(pos + 1, end, "xports")) {
         tryParseExportsDotAssign(true);
         return;
       }
@@ -645,27 +606,27 @@ private:
 
   bool tryParseObjectHasOwnProperty(const char* it_id_start, size_t it_id_len) {
     char ch = commentWhitespace();
-    if (ch != 'O' || pos + 6 >= end || !str_eq5(pos + 1, 'b', 'j', 'e', 'c', 't')) return false;
+    if (ch != 'O' || !matchesAt(pos + 1, end, "bject")) return false;
     pos += 6;
     ch = commentWhitespace();
     if (ch != '.') return false;
     pos++;
     ch = commentWhitespace();
     if (ch == 'p') {
-      if (pos + 9 >= end || !str_eq8(pos + 1, 'r', 'o', 't', 'o', 't', 'y', 'p', 'e')) return false;
+      if (!matchesAt(pos + 1, end, "rototype")) return false;
       pos += 9;
       ch = commentWhitespace();
       if (ch != '.') return false;
       pos++;
       ch = commentWhitespace();
     }
-    if (ch != 'h' || pos + 14 >= end || !str_eq13(pos + 1, 'a', 's', 'O', 'w', 'n', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'y')) return false;
+    if (ch != 'h' || !matchesAt(pos + 1, end, "asOwnProperty")) return false;
     pos += 14;
     ch = commentWhitespace();
     if (ch != '.') return false;
     pos++;
     ch = commentWhitespace();
-    if (ch != 'c' || pos + 4 >= end || !str_eq3(pos + 1, 'a', 'l', 'l')) return false;
+    if (ch != 'c' || !matchesAt(pos + 1, end, "all")) return false;
     pos += 4;
     ch = commentWhitespace();
     if (ch != '(') return false;
@@ -691,7 +652,7 @@ private:
     if (ch == '.') {
       pos++;
       ch = commentWhitespace();
-      if (ch == 'd' && pos + 14 < end && str_eq13(pos + 1, 'e', 'f', 'i', 'n', 'e', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'y')) {
+      if (ch == 'd' && matchesAt(pos + 1, end, "efineProperty")) {
         const char* exportStart = nullptr;
         const char* exportEnd = nullptr;
         while (true) {
@@ -718,13 +679,13 @@ private:
           pos++;
           ch = commentWhitespace();
           if (ch == 'e') {
-            if (pos + 10 >= end || !str_eq9(pos + 1, 'n', 'u', 'm', 'e', 'r', 'a', 'b', 'l', 'e')) break;
+            if (!matchesAt(pos + 1, end, "numerable")) break;
             pos += 10;
             ch = commentWhitespace();
             if (ch != ':') break;
             pos++;
             ch = commentWhitespace();
-            if (ch != 't' || pos + 4 >= end || !str_eq3(pos + 1, 'r', 'u', 'e')) break;
+            if (ch != 't' || !matchesAt(pos + 1, end, "rue")) break;
             pos += 4;
             ch = commentWhitespace();
             if (ch != ',') break;
@@ -732,7 +693,7 @@ private:
             ch = commentWhitespace();
           }
           if (ch == 'v') {
-            if (pos + 5 >= end || !str_eq4(pos + 1, 'a', 'l', 'u', 'e')) break;
+            if (!matchesAt(pos + 1, end, "alue")) break;
             pos += 5;
             ch = commentWhitespace();
             if (ch != ':') break;
@@ -741,14 +702,14 @@ private:
             pos = revertPos;
             return;
           } else if (ch == 'g') {
-            if (pos + 3 >= end || !str_eq2(pos + 1, 'e', 't')) break;
+            if (!matchesAt(pos + 1, end, "et")) break;
             pos += 3;
             ch = commentWhitespace();
             if (ch == ':') {
               pos++;
               ch = commentWhitespace();
               if (ch != 'f') break;
-              if (pos + 8 >= end || !str_eq7(pos + 1, 'u', 'n', 'c', 't', 'i', 'o', 'n')) break;
+              if (!matchesAt(pos + 1, end, "unction")) break;
               pos += 8;
               const char* lastPos = pos;
               ch = commentWhitespace();
@@ -765,7 +726,7 @@ private:
             pos++;
             ch = commentWhitespace();
             if (ch != 'r') break;
-            if (pos + 6 >= end || !str_eq5(pos + 1, 'e', 't', 'u', 'r', 'n')) break;
+            if (!matchesAt(pos + 1, end, "eturn")) break;
             pos += 6;
             ch = commentWhitespace();
             if (!identifier(ch)) break;
@@ -810,7 +771,7 @@ private:
           }
           break;
         }
-      } else if (keys && ch == 'k' && pos + 4 < end && str_eq3(pos + 1, 'e', 'y', 's')) {
+      } else if (keys && ch == 'k' && matchesAt(pos + 1, end, "eys")) {
         while (true) {
           pos += 4;
           revertPos = pos - 1;
@@ -829,14 +790,14 @@ private:
           if (ch != '.') break;
           pos++;
           ch = commentWhitespace();
-          if (ch != 'f' || pos + 7 >= end || !str_eq6(pos + 1, 'o', 'r', 'E', 'a', 'c', 'h')) break;
+          if (ch != 'f' || !matchesAt(pos + 1, end, "orEach")) break;
           pos += 7;
           ch = commentWhitespace();
           revertPos = pos - 1;
           if (ch != '(') break;
           pos++;
           ch = commentWhitespace();
-          if (ch != 'f' || pos + 8 >= end || !str_eq7(pos + 1, 'u', 'n', 'c', 't', 'i', 'o', 'n')) break;
+          if (ch != 'f' || !matchesAt(pos + 1, end, "unction")) break;
           pos += 8;
           ch = commentWhitespace();
           if (ch != '(') break;
@@ -863,12 +824,12 @@ private:
           ch = commentWhitespace();
 
           if (ch == '=') {
-            if (pos + 3 >= end || !str_eq2(pos + 1, '=', '=')) break;
+            if (!matchesAt(pos + 1, end, "==")) break;
             pos += 3;
             ch = commentWhitespace();
             if (ch != '"' && ch != '\'') break;
             char quot = ch;
-            if (pos + 8 >= end || !str_eq7(pos + 1, 'd', 'e', 'f', 'a', 'u', 'l', 't')) break;
+            if (!matchesAt(pos + 1, end, "default")) break;
             pos += 8;
             ch = commentWhitespace();
             if (ch != quot) break;
@@ -880,12 +841,12 @@ private:
             if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
             pos += it_id_len;
             ch = commentWhitespace();
-            if (ch != '=' || pos + 3 >= end || !str_eq2(pos + 1, '=', '=')) break;
+            if (ch != '=' || !matchesAt(pos + 1, end, "==")) break;
             pos += 3;
             ch = commentWhitespace();
             if (ch != '"' && ch != '\'') break;
             quot = ch;
-            if (pos + 11 >= end || !str_eq10(pos + 1, '_', '_', 'e', 's', 'M', 'o', 'd', 'u', 'l', 'e')) break;
+            if (!matchesAt(pos + 1, end, "__esModule")) break;
             pos += 11;
             ch = commentWhitespace();
             if (ch != quot) break;
@@ -894,7 +855,7 @@ private:
             if (ch != ')') break;
             pos++;
             ch = commentWhitespace();
-            if (ch != 'r' || pos + 6 >= end || !str_eq5(pos + 1, 'e', 't', 'u', 'r', 'n')) break;
+            if (ch != 'r' || !matchesAt(pos + 1, end, "eturn")) break;
             pos += 6;
             ch = commentWhitespace();
             if (ch == ';')
@@ -914,7 +875,7 @@ private:
                 if (ch != ')') break;
                 pos++;
                 ch = commentWhitespace();
-                if (ch != 'r' || pos + 6 >= end || !str_eq5(pos + 1, 'e', 't', 'u', 'r', 'n')) break;
+                if (ch != 'r' || !matchesAt(pos + 1, end, "eturn")) break;
                 pos += 6;
                 ch = commentWhitespace();
                 if (ch == ';')
@@ -936,7 +897,7 @@ private:
                 if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
                 pos += it_id_len;
                 ch = commentWhitespace();
-                if (ch != 'i' || pos + 3 >= end || !str_eq2(pos + 1, 'n', ' ')) break;
+                if (ch != 'i' || !matchesAt(pos + 1, end, "n ")) break;
                 pos += 3;
                 ch = commentWhitespace();
                 if (!readExportsOrModuleDotExports(ch)) break;
@@ -955,7 +916,7 @@ private:
                 if (ch != ']') break;
                 pos++;
                 ch = commentWhitespace();
-                if (ch != '=' || pos + 3 >= end || !str_eq2(pos + 1, '=', '=')) break;
+                if (ch != '=' || !matchesAt(pos + 1, end, "==")) break;
                 pos += 3;
                 ch = commentWhitespace();
                 if (pos + id_len > end || memcmp(pos, id_start, id_len) != 0) break;
@@ -973,7 +934,7 @@ private:
                 if (ch != ')') break;
                 pos++;
                 ch = commentWhitespace();
-                if (ch != 'r' || pos + 6 >= end || !str_eq5(pos + 1, 'e', 't', 'u', 'r', 'n')) break;
+                if (ch != 'r' || !matchesAt(pos + 1, end, "eturn")) break;
                 pos += 6;
                 ch = commentWhitespace();
                 if (ch == ';')
@@ -982,12 +943,12 @@ private:
               }
             }
           } else if (ch == '!') {
-            if (pos + 3 >= end || !str_eq2(pos + 1, '=', '=')) break;
+            if (!matchesAt(pos + 1, end, "==")) break;
             pos += 3;
             ch = commentWhitespace();
             if (ch != '"' && ch != '\'') break;
             char quot = ch;
-            if (pos + 8 >= end || !str_eq7(pos + 1, 'd', 'e', 'f', 'a', 'u', 'l', 't')) break;
+            if (!matchesAt(pos + 1, end, "default")) break;
             pos += 8;
             ch = commentWhitespace();
             if (ch != quot) break;
@@ -1000,14 +961,14 @@ private:
               if (ch != '!') break;
               pos++;
               ch = commentWhitespace();
-              if (ch == 'O' && pos + 7 < end && str_eq6(pos + 1, 'b', 'j', 'e', 'c', 't', '.')) {
+              if (ch == 'O' && matchesAt(pos + 1, end, "bject.")) {
                 if (!tryParseObjectHasOwnProperty(it_id_start, it_id_len)) break;
               } else if (identifier(ch)) {
                 ch = commentWhitespace();
                 if (ch != '.') break;
                 pos++;
                 ch = commentWhitespace();
-                if (ch != 'h' || pos + 14 >= end || !str_eq13(pos + 1, 'a', 's', 'O', 'w', 'n', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'y')) break;
+                if (ch != 'h' || !matchesAt(pos + 1, end, "asOwnProperty")) break;
                 pos += 14;
                 ch = commentWhitespace();
                 if (ch != '(') break;
@@ -1059,13 +1020,13 @@ private:
               ch = commentWhitespace();
             }
           } else if (ch == 'O') {
-            if (pos + 6 >= end || !str_eq5(pos + 1, 'b', 'j', 'e', 'c', 't')) break;
+            if (!matchesAt(pos + 1, end, "bject")) break;
             pos += 6;
             ch = commentWhitespace();
             if (ch != '.') break;
             pos++;
             ch = commentWhitespace();
-            if (ch != 'd' || pos + 14 >= end || !str_eq13(pos + 1, 'e', 'f', 'i', 'n', 'e', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'y')) break;
+            if (ch != 'd' || !matchesAt(pos + 1, end, "efineProperty")) break;
             pos += 14;
             ch = commentWhitespace();
             if (ch != '(') break;
@@ -1085,26 +1046,26 @@ private:
             if (ch != '{') break;
             pos++;
             ch = commentWhitespace();
-            if (ch != 'e' || pos + 10 >= end || !str_eq9(pos + 1, 'n', 'u', 'm', 'e', 'r', 'a', 'b', 'l', 'e')) break;
+            if (ch != 'e' || !matchesAt(pos + 1, end, "numerable")) break;
             pos += 10;
             ch = commentWhitespace();
             if (ch != ':') break;
             pos++;
             ch = commentWhitespace();
-            if (ch != 't' || pos + 4 >= end || !str_eq3(pos + 1, 'r', 'u', 'e')) break;
+            if (ch != 't' || !matchesAt(pos + 1, end, "rue")) break;
             pos += 4;
             ch = commentWhitespace();
             if (ch != ',') break;
             pos++;
             ch = commentWhitespace();
-            if (ch != 'g' || pos + 3 >= end || !str_eq2(pos + 1, 'e', 't')) break;
+            if (ch != 'g' || !matchesAt(pos + 1, end, "et")) break;
             pos += 3;
             ch = commentWhitespace();
             if (ch == ':') {
               pos++;
               ch = commentWhitespace();
               if (ch != 'f') break;
-              if (pos + 8 >= end || !str_eq7(pos + 1, 'u', 'n', 'c', 't', 'i', 'o', 'n')) break;
+              if (!matchesAt(pos + 1, end, "unction")) break;
               pos += 8;
               const char* lastPos = pos;
               ch = commentWhitespace();
@@ -1120,7 +1081,7 @@ private:
             if (ch != '{') break;
             pos++;
             ch = commentWhitespace();
-            if (ch != 'r' || pos + 6 >= end || !str_eq5(pos + 1, 'e', 't', 'u', 'r', 'n')) break;
+            if (ch != 'r' || !matchesAt(pos + 1, end, "eturn")) break;
             pos += 6;
             ch = commentWhitespace();
             if (pos + id_len > end || memcmp(pos, id_start, id_len) != 0) break;
@@ -1208,11 +1169,11 @@ private:
           bPos--;
         switch (*bPos) {
           case 'r':
-            if (!readPrecedingKeyword2(bPos - 1, 'v', 'a'))
+            if (!readPrecedingKeyword2(bPos - 1, "va"))
               return;
             break;
           case 't':
-            if (!readPrecedingKeyword2(bPos - 1, 'l', 'e') && !readPrecedingKeyword4(bPos - 1, 'c', 'o', 'n', 's'))
+            if (!readPrecedingKeyword2(bPos - 1, "le") && !readPrecedingKeyword4(bPos - 1, "cons"))
               return;
             break;
           default:
@@ -1236,7 +1197,7 @@ private:
         pos++;
         ch = commentWhitespace();
         // Use str_eq4 for more efficient comparison
-        if (ch == 'm' && pos + 4 <= end && str_eq3(pos + 1, 'e', 't', 'a')) {
+        if (ch == 'm' && pos + 4 <= end && matchesAt(pos + 1, end, "eta")) {
           // Check that 'meta' is not followed by an identifier character
           if (pos + 4 < end && isIdentifierChar(static_cast<uint8_t>(pos[4]))) {
             // It's something like import.metaData, not import.meta
@@ -1322,7 +1283,7 @@ public:
       if (openTokenDepth == 0) {
         switch (ch) {
           case 'i':
-            if (pos + 6 < end && str_eq5(pos + 1, 'm', 'p', 'o', 'r', 't') && keywordStart(pos))
+            if (pos + 6 < end && matchesAt(pos + 1, end, "mport") && keywordStart(pos))
               throwIfImportStatement();
             lastTokenPos = pos;
             continue;
@@ -1334,7 +1295,7 @@ public:
             continue;
           }
           case '_':
-            if (pos + 23 < end && str_eq22(pos + 1, 'i', 'n', 't', 'e', 'r', 'o', 'p', 'R', 'e', 'q', 'u', 'i', 'r', 'e', 'W', 'i', 'l', 'd', 'c', 'a', 'r', 'd') && (keywordStart(pos) || *(pos - 1) == '.')) {
+            if (pos + 23 < end && matchesAt(pos + 1, end, "interopRequireWildcard") && (keywordStart(pos) || *(pos - 1) == '.')) {
               const char* startPos = pos;
               pos += 23;
               if (*pos == '(') {
@@ -1343,9 +1304,9 @@ public:
                 if (tryParseRequire(RequireType::Import) && keywordStart(startPos))
                   tryBacktrackAddStarExportBinding(startPos - 1);
               }
-            } else if (pos + 8 < end && str_eq7(pos + 1, '_', 'e', 'x', 'p', 'o', 'r', 't') && (keywordStart(pos) || *(pos - 1) == '.')) {
+            } else if (pos + 8 < end && matchesAt(pos + 1, end, "_export") && (keywordStart(pos) || *(pos - 1) == '.')) {
               pos += 8;
-              if (pos + 4 < end && str_eq4(pos, 'S', 't', 'a', 'r'))
+              if (pos + 4 < end && matchesAt(pos, end, "Star"))
                 pos += 4;
               if (*pos == '(') {
                 openTokenPosStack_[openTokenDepth++] = lastTokenPos;
@@ -1362,7 +1323,7 @@ public:
 
       switch (ch) {
         case 'e':
-          if (pos + 6 < end && str_eq5(pos + 1, 'x', 'p', 'o', 'r', 't') && keywordStart(pos)) {
+          if (pos + 6 < end && matchesAt(pos + 1, end, "xport") && keywordStart(pos)) {
             if (pos + 7 < end && *(pos + 6) == 's')
               tryParseExportsDotAssign(false);
             else if (openTokenDepth == 0)
@@ -1370,15 +1331,15 @@ public:
           }
           break;
         case 'c':
-          if (keywordStart(pos) && pos + 5 < end && str_eq4(pos + 1, 'l', 'a', 's', 's') && isBrOrWs(*(pos + 5)))
+          if (keywordStart(pos) && matchesAt(pos + 1, end, "lass") && isBrOrWs(*(pos + 5)))
             nextBraceIsClass = true;
           break;
         case 'm':
-          if (pos + 6 < end && str_eq5(pos + 1, 'o', 'd', 'u', 'l', 'e') && keywordStart(pos))
+          if (pos + 6 < end && matchesAt(pos + 1, end, "odule") && keywordStart(pos))
             tryParseModuleExportsDotAssign();
           break;
         case 'O':
-          if (pos + 6 < end && str_eq5(pos + 1, 'b', 'j', 'e', 'c', 't') && keywordStart(pos))
+          if (pos + 6 < end && matchesAt(pos + 1, end, "bject") && keywordStart(pos))
             tryParseObjectDefineOrKeys(openTokenDepth == 0);
           break;
         case '(':
