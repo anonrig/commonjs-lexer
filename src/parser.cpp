@@ -1240,6 +1240,7 @@ public:
         if (ch == '\n' || ch == '\r')
           break;
       }
+      lastTokenPos = pos;  // Update lastTokenPos after shebang
     }
 
     while (pos++ < end) {
