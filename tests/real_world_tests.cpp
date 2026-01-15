@@ -120,16 +120,16 @@ TEST(real_world_tests, rollup_babel_reexports) {
     not.detect = require(\"ignored\");\
 \
     var _external = require(\"external\");\
-\
-    // Babel <7.12.0, loose mode\
+\n\
+    // Babel <7.12.0, loose mode\n\
     Object.keys(_external).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       exports[key] = _external[key];\
     });\
 \
     var _external2 = require(\"external2\");\
-\
-    // Babel <7.12.0\
+\n\
+    // Babel <7.12.0\n\
     Object.keys(_external2).forEach(function (key) {\
       if (key === \"default\" || /*comment!*/ key === \"__esModule\") return;\
       Object.defineProperty(exports, key, {\
@@ -141,8 +141,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external001 = require(\"external001\");\
-\
-    // Babel >=7.12.0, loose mode\
+\n\
+    // Babel >=7.12.0, loose mode\n\
     Object.keys(_external001).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (key in exports && exports[key] === _external001[key]) return;\
@@ -150,8 +150,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external003 = require(\"external003\");\
-\
-    // Babel >=7.12.0, loose mode, reexports conflicts filter\
+\n\
+    // Babel >=7.12.0, loose mode, reexports conflicts filter\n\
     Object.keys(_external003).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (Object.prototype.hasOwnProperty.call(_exportNames, key)) return;\
@@ -160,8 +160,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external002 = require(\"external002\");\
-\
-    // Babel >=7.12.0\
+\n\
+    // Babel >=7.12.0\n\
     Object.keys(_external002).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (key in exports && exports[key] === _external002[key]) return;\
@@ -174,8 +174,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external004 = require(\"external004\");\
-\
-    // Babel >=7.12.0, reexports conflict filter\
+\n\
+    // Babel >=7.12.0, reexports conflict filter\n\
     Object.keys(_external004).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (Object.prototype.hasOwnProperty.call(_exportNames, key)) return;\
