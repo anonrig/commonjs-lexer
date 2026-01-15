@@ -814,14 +814,14 @@ TEST(real_world_tests, import_meta) {
 }
 
 TEST(real_world_tests, import_meta_edge_cases) {
-  auto source = 
-    "    // Import meta\n"
-    "    import.\n"
-    "      meta\n"
-    "    // Not import meta\n"
-    "    a.\n"
-    "    import.\n"
-    "      meta\n";
+  auto source = R"(    // Import meta
+    import.
+      meta
+    // Not import meta
+    a.
+    import.
+      meta
+)";
   auto result = lexer::parse_commonjs(source);
   ASSERT_FALSE(result.has_value());
   auto err = lexer::get_last_error();
