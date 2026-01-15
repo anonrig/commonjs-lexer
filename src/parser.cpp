@@ -390,6 +390,22 @@ private:
     }
     // Create string_view to check for duplicates without allocation
     std::string_view export_name(start, end_pos - start);
+    
+    // Skip exports that are incomplete Unicode escape sequences
+    // A single \u{XXXX} is 8 chars: \u{D83C}
+    // Complete emoji like \u{D83C}\u{DF10} is 16 chars
+    // Filter out single surrogate halves which are invalid on their own
+    if (export_name.size() == 8 &&
+        export_name[0] == '\\' && export_name[1] == 'u' && export_name[2] == '{' &&
+        export_name[7] == '}') {
+      // Check if it's in surrogate pair range (D800-DFFF)
+      if (export_name[3] == 'D' && 
+          ((export_name[4] >= '8' && export_name[4] <= '9') ||
+           (export_name[4] >= 'A' && export_name[4] <= 'F'))) {
+        return; // Skip incomplete surrogate pairs
+      }
+    }
+    
     // Check if this export already exists (avoid duplicates)
     for (const auto& existing : *exports) {
       if (existing == export_name) {
