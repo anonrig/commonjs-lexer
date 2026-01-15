@@ -470,14 +470,38 @@ private:
       if (identifier(ch)) {
         const char* endPos = pos;
         ch = commentWhitespace();
+        
+        // Check if this is a getter syntax: get identifier()
+        if (ch != ':' && endPos - startPos == 3 && 
+            startPos[0] == 'g' && startPos[1] == 'e' && startPos[2] == 't') {
+          // Skip getter: get identifier() { ... }
+          if (identifier(ch)) {
+            ch = commentWhitespace();
+            if (ch == '(') {
+              // This is a getter, stop parsing here (early termination)
+              pos = revertPos;
+              return;
+            }
+          }
+          // Not a getter, revert and fail
+          pos = revertPos;
+          return;
+        }
+        
         if (ch == ':') {
           pos++;
           ch = commentWhitespace();
-          if (!identifier(ch)) {
+          // Try to parse require() first, then fall back to identifier
+          if (ch == 'r' && tryParseRequire(RequireType::ExportAssign)) {
+            // Successfully parsed require()
+            ch = *pos;
+          } else if (!identifier(ch)) {
+            // Neither require() nor identifier, stop parsing
             pos = revertPos;
             return;
+          } else {
+            ch = *pos;
           }
-          ch = *pos;
         }
         addExport(startPos, endPos);
       } else if (ch == '\'' || ch == '"') {
@@ -488,11 +512,17 @@ private:
         if (ch == ':') {
           pos++;
           ch = commentWhitespace();
-          if (!identifier(ch)) {
+          // Try to parse require() first, then fall back to identifier
+          if (ch == 'r' && tryParseRequire(RequireType::ExportAssign)) {
+            // Successfully parsed require()
+            ch = *pos;
+          } else if (!identifier(ch)) {
+            // Neither require() nor identifier, stop parsing
             pos = revertPos;
             return;
+          } else {
+            ch = *pos;
           }
-          ch = *pos;
           addExport(start, end_pos);
         }
       } else if (ch == '.' && pos + 2 < end && str_eq2(pos + 1, '.', '.')) {
