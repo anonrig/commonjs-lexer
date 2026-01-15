@@ -1179,7 +1179,7 @@ private:
         // Check if followed by 'meta' (possibly with whitespace)
         pos++;
         ch = commentWhitespace();
-        if (ch == 'm' && pos + 3 <= end && str_eq4(pos, 'm', 'e', 't', 'a')) {
+        if (ch == 'm' && pos + 4 <= end && str_eq4(pos, 'm', 'e', 't', 'a')) {
           // Check that 'meta' is not followed by an identifier character
           if (pos + 4 < end) {
             char next = pos[4];
