@@ -1179,8 +1179,10 @@ private:
         // Check if followed by 'meta' (possibly with whitespace)
         pos++;
         ch = commentWhitespace();
+        // Need pos + 3 < end to read pos[3], which is pos + 4 <= end
         if (ch == 'm' && pos + 4 <= end && str_eq4(pos, 'm', 'e', 't', 'a')) {
           // Check that 'meta' is not followed by an identifier character
+          // If we're at end of string, that's OK - it's import.meta
           if (pos + 4 < end) {
             char next = pos[4];
             if ((next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') ||
