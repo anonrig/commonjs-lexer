@@ -484,9 +484,7 @@ TEST(real_world_tests, shebang) {
     ASSERT_EQ(result->exports.size(), 0);
   }
   {
-    auto result = lexer::parse_commonjs("#! (  {\
-      exports.asdf = 'asdf';\
-    ");
+    auto result = lexer::parse_commonjs("#! (  {\n      exports.asdf = 'asdf';\n    ");
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->exports.size(), 1);
     ASSERT_EQ(result->exports[0], "asdf");

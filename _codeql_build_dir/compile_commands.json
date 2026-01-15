@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/src",
+  "command": "/home/runner/work/commonjs-lexer/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/commonjs-lexer/commonjs-lexer/src -I/home/runner/work/commonjs-lexer/commonjs-lexer/include -O3 -DNDEBUG -std=c++17 -Wall -Wextra -Weffc++ -Wsuggest-override -Wfatal-errors -Wsign-compare -Wshadow -Wwrite-strings -Wpointer-arith -Winit-self -Wconversion -Wno-sign-conversion -mno-avx256-split-unaligned-load -mno-avx256-split-unaligned-store -o CMakeFiles/lexer.dir/lexer.cpp.o -c /home/runner/work/commonjs-lexer/commonjs-lexer/src/lexer.cpp",
+  "file": "/home/runner/work/commonjs-lexer/commonjs-lexer/src/lexer.cpp",
+  "output": "src/CMakeFiles/lexer.dir/lexer.cpp.o"
+},
+{
+  "directory": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-build/googletest",
+  "command": "/home/runner/work/commonjs-lexer/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest/include -I/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest -O3 -DNDEBUG -std=c++17 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gtest.dir/src/gtest-all.cc.o -c /home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest/src/gtest-all.cc",
+  "file": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest/src/gtest-all.cc",
+  "output": "_deps/gtest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o"
+},
+{
+  "directory": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-build/googletest",
+  "command": "/home/runner/work/commonjs-lexer/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++  -isystem /home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest/include -isystem /home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest -O3 -DNDEBUG -std=c++17 -Wall -Wshadow -Wundef -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gtest_main.dir/src/gtest_main.cc.o -c /home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest/src/gtest_main.cc",
+  "file": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest/src/gtest_main.cc",
+  "output": "_deps/gtest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o"
+},
+{
+  "directory": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/tests",
+  "command": "/home/runner/work/commonjs-lexer/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++  -I/home/runner/work/commonjs-lexer/commonjs-lexer/include -isystem /home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest/include -isystem /home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-src/googletest -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/real_world_tests.dir/real_world_tests.cpp.o -c /home/runner/work/commonjs-lexer/commonjs-lexer/tests/real_world_tests.cpp",
+  "file": "/home/runner/work/commonjs-lexer/commonjs-lexer/tests/real_world_tests.cpp",
+  "output": "tests/CMakeFiles/real_world_tests.dir/real_world_tests.cpp.o"
+},
+{
+  "directory": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/singleheader",
+  "command": "/home/runner/work/commonjs-lexer/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++   -O3 -DNDEBUG -std=c++17 -o CMakeFiles/lexer-singleheader-lib.dir/lexer.cpp.o -c /home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/singleheader/lexer.cpp",
+  "file": "/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/singleheader/lexer.cpp",
+  "output": "singleheader/CMakeFiles/lexer-singleheader-lib.dir/lexer.cpp.o"
+}
+]

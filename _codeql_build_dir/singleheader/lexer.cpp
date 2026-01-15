@@ -1,4 +1,7 @@
-#include "lexer/parser.h"
+/* auto-generated on 2026-01-15 01:21:24 +0000. Do not edit! */
+/* begin file src/lexer.cpp */
+#include "lexer.h"
+/* begin file src/parser.cpp */
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -1436,3 +1439,5 @@ std::optional<lexer_error> get_last_error() {
 }
 
 }  // namespace lexer
+/* end file src/parser.cpp */
+/* end file src/lexer.cpp */
