@@ -1258,7 +1258,9 @@ public:
     source = file_contents.data();
     pos = source - 1;
     end = source + file_contents.size();
-    lastTokenPos = source;
+    // Initialize lastTokenPos to before source to detect start-of-input condition
+    // when checking if '/' should be treated as regex vs division operator
+    lastTokenPos = source - 1;
 
     exports = &out_exports;
     re_exports = &out_re_exports;
@@ -1399,16 +1401,19 @@ public:
             blockComment();
             continue;
           } else {
-            char lastToken = *lastTokenPos;
+            // Check if lastTokenPos is before the source (start of input)
+            bool isStartOfInput = lastTokenPos < source;
+            char lastToken = isStartOfInput ? '\0' : *lastTokenPos;
+            
             if ((isExpressionPunctuator(lastToken) &&
                  !(lastToken == '.' && lastTokenPos > source && *(lastTokenPos - 1) >= '0' && *(lastTokenPos - 1) <= '9') &&
                  !(lastToken == '+' && lastTokenPos > source && *(lastTokenPos - 1) == '+') &&
                  !(lastToken == '-' && lastTokenPos > source && *(lastTokenPos - 1) == '-')) ||
                 (lastToken == ')' && isParenKeyword(openTokenPosStack_[openTokenDepth])) ||
-                (lastToken == '}' && (isExpressionTerminator(openTokenPosStack_[openTokenDepth]) || openClassPosStack[openTokenDepth])) ||
+                (lastToken == '}' && (openTokenPosStack_[openTokenDepth] < source || isExpressionTerminator(openTokenPosStack_[openTokenDepth]) || openClassPosStack[openTokenDepth])) ||
                 (lastToken == '/' && lastSlashWasDivision) ||
-                isExpressionKeyword(lastTokenPos) ||
-                !lastToken) {
+                (!isStartOfInput && isExpressionKeyword(lastTokenPos)) ||
+                !lastToken || isStartOfInput) {
               regularExpression();
               lastSlashWasDivision = false;
             } else {
