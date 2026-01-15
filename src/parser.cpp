@@ -388,6 +388,14 @@ private:
       start++;
       end_pos--;
     }
+    // Create string_view to check for duplicates without allocation
+    std::string_view export_name(start, end_pos - start);
+    // Check if this export already exists (avoid duplicates)
+    for (const auto& existing : *exports) {
+      if (existing == export_name) {
+        return; // Already exists, skip
+      }
+    }
     exports->emplace_back(start, end_pos - start);
   }
 
