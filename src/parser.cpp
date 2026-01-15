@@ -4,9 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
-#include <optional>
-#include <string>
-#include <vector>
 
 namespace lexer {
 
@@ -462,6 +459,19 @@ private:
     return false;
   }
 
+  // Helper to parse property value in object literal (identifier or require())
+  bool tryParsePropertyValue(char& ch) {
+    if (ch == 'r' && tryParseRequire(RequireType::ExportAssign)) {
+      ch = *pos;
+      return true;
+    }
+    if (identifier(ch)) {
+      ch = *pos;
+      return true;
+    }
+    return false;
+  }
+
   void tryParseLiteralExports() {
     const char* revertPos = pos - 1;
     while (pos++ < end) {
@@ -490,16 +500,9 @@ private:
         if (ch == ':') {
           pos++;
           ch = commentWhitespace();
-          // Try to parse require() first, then fall back to identifier
-          if (ch == 'r' && tryParseRequire(RequireType::ExportAssign)) {
-            // Successfully parsed require()
-            ch = *pos;
-          } else if (!identifier(ch)) {
-            // Neither require() nor identifier, stop parsing
+          if (!tryParsePropertyValue(ch)) {
             pos = revertPos;
             return;
-          } else {
-            ch = *pos;
           }
         }
         addExport(startPos, endPos);
@@ -511,16 +514,9 @@ private:
         if (ch == ':') {
           pos++;
           ch = commentWhitespace();
-          // Try to parse require() first, then fall back to identifier
-          if (ch == 'r' && tryParseRequire(RequireType::ExportAssign)) {
-            // Successfully parsed require()
-            ch = *pos;
-          } else if (!identifier(ch)) {
-            // Neither require() nor identifier, stop parsing
+          if (!tryParsePropertyValue(ch)) {
             pos = revertPos;
             return;
-          } else {
-            ch = *pos;
           }
           addExport(start, end_pos);
         }
