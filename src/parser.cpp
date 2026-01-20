@@ -1385,14 +1385,14 @@ public:
   }
 };
 
-std::optional<lexer_analysis> parse_commonjs(const std::string_view file_contents) {
+std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents) {
   last_error.reset();
 
   lexer_analysis result;
   CJSLexer lexer(result.exports, result.re_exports);
 
   if (lexer.parse(file_contents)) {
-    return result;
+    return result;  // NRVO or implicit move applies
   }
 
   return std::nullopt;
