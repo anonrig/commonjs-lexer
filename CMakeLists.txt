@@ -28,17 +28,21 @@ option(LEXER_TESTING "Build tests" ${BUILD_TESTING})
 # errors due to CPM, so this is here to support disabling all the testing
 # for lexer if one only wishes to use the lexer library.
 if(LEXER_TESTING OR LEXER_BENCHMARKS)
-  include(cmake/CPM.cmake)
-  # CPM requires git as an implicit dependency
-  find_package(Git QUIET)
-  # We use googletest in the tests
-  if(Git_FOUND AND LEXER_TESTING)
-    CPMAddPackage(
-      NAME GTest
-      GITHUB_REPOSITORY google/googletest
-      VERSION 1.14.0
-      OPTIONS  "BUILD_GMOCK OFF" "INSTALL_GTEST OFF"
-    )
+  # Try to find GTest system package first
+  find_package(GTest QUIET)
+  if(NOT GTest_FOUND)
+    include(cmake/CPM.cmake)
+    # CPM requires git as an implicit dependency
+    find_package(Git QUIET)
+    # We use googletest in the tests
+    if(Git_FOUND AND LEXER_TESTING)
+      CPMAddPackage(
+        NAME GTest
+        GITHUB_REPOSITORY google/googletest
+        VERSION 1.14.0
+        OPTIONS  "BUILD_GMOCK OFF" "INSTALL_GTEST OFF"
+      )
+    endif()
   endif()
   # We use Google Benchmark, but it does not build under several 32-bit systems.
   if(Git_FOUND AND LEXER_BENCHMARKS AND (CMAKE_SIZEOF_VOID_P EQUAL 8))

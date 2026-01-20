@@ -120,16 +120,16 @@ TEST(real_world_tests, rollup_babel_reexports) {
     not.detect = require(\"ignored\");\
 \
     var _external = require(\"external\");\
-\
-    // Babel <7.12.0, loose mode\
+\n\
+    // Babel <7.12.0, loose mode\n\
     Object.keys(_external).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       exports[key] = _external[key];\
     });\
 \
     var _external2 = require(\"external2\");\
-\
-    // Babel <7.12.0\
+\n\
+    // Babel <7.12.0\n\
     Object.keys(_external2).forEach(function (key) {\
       if (key === \"default\" || /*comment!*/ key === \"__esModule\") return;\
       Object.defineProperty(exports, key, {\
@@ -141,8 +141,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external001 = require(\"external001\");\
-\
-    // Babel >=7.12.0, loose mode\
+\n\
+    // Babel >=7.12.0, loose mode\n\
     Object.keys(_external001).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (key in exports && exports[key] === _external001[key]) return;\
@@ -150,8 +150,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external003 = require(\"external003\");\
-\
-    // Babel >=7.12.0, loose mode, reexports conflicts filter\
+\n\
+    // Babel >=7.12.0, loose mode, reexports conflicts filter\n\
     Object.keys(_external003).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (Object.prototype.hasOwnProperty.call(_exportNames, key)) return;\
@@ -160,8 +160,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external002 = require(\"external002\");\
-\
-    // Babel >=7.12.0\
+\n\
+    // Babel >=7.12.0\n\
     Object.keys(_external002).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (key in exports && exports[key] === _external002[key]) return;\
@@ -174,8 +174,8 @@ TEST(real_world_tests, rollup_babel_reexports) {
     });\
 \
     var _external004 = require(\"external004\");\
-\
-    // Babel >=7.12.0, reexports conflict filter\
+\n\
+    // Babel >=7.12.0, reexports conflict filter\n\
     Object.keys(_external004).forEach(function (key) {\
       if (key === \"default\" || key === \"__esModule\") return;\
       if (Object.prototype.hasOwnProperty.call(_exportNames, key)) return;\
@@ -484,9 +484,7 @@ TEST(real_world_tests, shebang) {
     ASSERT_EQ(result->exports.size(), 0);
   }
   {
-    auto result = lexer::parse_commonjs("#! (  {\
-      exports.asdf = 'asdf';\
-    ");
+    auto result = lexer::parse_commonjs("#! (  {\n      exports.asdf = 'asdf';\n    ");
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->exports.size(), 1);
     ASSERT_EQ(result->exports[0], "asdf");
@@ -559,20 +557,20 @@ TEST(real_world_tests, literal_exports_unsupported) {
 }
 
 TEST(real_world_tests, literal_exports_example) {
-  auto result = lexer::parse_commonjs("\
-    module.exports = {\
-      // These WILL be detected as exports\
-      a: a,\
-      b: b,\
-      \
-      // This WILL be detected as an export\
-      e: require('d'),\
-    \
-      // These WONT be detected as exports\
-      // because the object parser stops on the non-identifier\
-      // expression \"require('d')\"\
-      f: 'f'\
-    }\
+  auto result = lexer::parse_commonjs("\n\
+    module.exports = {\n\
+      // These WILL be detected as exports\n\
+      a: a,\n\
+      b: b,\n\
+      \n\
+      // This WILL be detected as an export\n\
+      e: require('d'),\n\
+    \n\
+      // These WONT be detected as exports\n\
+      // because the object parser stops on the non-identifier\n\
+      // expression \"require('d')\"\n\
+      f: 'f'\n\
+    }\n\
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 3);
@@ -581,76 +579,76 @@ TEST(real_world_tests, literal_exports_example) {
 }
 
 TEST(real_world_tests, literal_exports_complex) {
-  auto result = lexer::parse_commonjs("\
-    function defineProp(name, value) {\
-      delete module.exports[name];\
-      module.exports[name] = value;\
-      return value;\
-    }\
-\
-    module.exports = {\
-      Parser: Parser,\
-      Tokenizer: require(\"./Tokenizer.js\"),\
-      ElementType: require(\"domelementtype\"),\
-      DomHandler: DomHandler,\
-      get FeedHandler() {\
-          return defineProp(\"FeedHandler\", require(\"./FeedHandler.js\"));\
-      },\
-      get Stream() {\
-          return defineProp(\"Stream\", require(\"./Stream.js\"));\
-      },\
-      get WritableStream() {\
-          return defineProp(\"WritableStream\", require(\"./WritableStream.js\"));\
-      },\
-      get ProxyHandler() {\
-          return defineProp(\"ProxyHandler\", require(\"./ProxyHandler.js\"));\
-      },\
-      get DomUtils() {\
-          return defineProp(\"DomUtils\", require(\"domutils\"));\
-      },\
-      get CollectingHandler() {\
-          return defineProp(\
-              \"CollectingHandler\",\
-              require(\"./CollectingHandler.js\")\
-          );\
-      },\
-      // For legacy support\
-      DefaultHandler: DomHandler,\
-      get RssHandler() {\
-          return defineProp(\"RssHandler\", this.FeedHandler);\
-      },\
-      //helper methods\
-      parseDOM: function(data, options) {\
-          var handler = new DomHandler(options);\
-          new Parser(handler, options).end(data);\
-          return handler.dom;\
-      },\
-      parseFeed: function(feed, options) {\
-          var handler = new module.exports.FeedHandler(options);\
-          new Parser(handler, options).end(feed);\
-          return handler.dom;\
-      },\
-      createDomStream: function(cb, options, elementCb) {\
-          var handler = new DomHandler(cb, options, elementCb);\
-          return new Parser(handler, options);\
-      },\
-      // List of all events that the parser emits\
-      EVENTS: {\
-          /* Format: eventname: number of arguments */\
-          attribute: 2,\
-          cdatastart: 0,\
-          cdataend: 0,\
-          text: 1,\
-          processinginstruction: 2,\
-          comment: 1,\
-          commentend: 0,\
-          closetag: 1,\
-          opentag: 2,\
-          opentagname: 1,\
-          error: 1,\
-          end: 0\
-      }\
-    };\
+  auto result = lexer::parse_commonjs("\n\
+    function defineProp(name, value) {\n\
+      delete module.exports[name];\n\
+      module.exports[name] = value;\n\
+      return value;\n\
+    }\n\
+\n\
+    module.exports = {\n\
+      Parser: Parser,\n\
+      Tokenizer: require(\"./Tokenizer.js\"),\n\
+      ElementType: require(\"domelementtype\"),\n\
+      DomHandler: DomHandler,\n\
+      get FeedHandler() {\n\
+          return defineProp(\"FeedHandler\", require(\"./FeedHandler.js\"));\n\
+      },\n\
+      get Stream() {\n\
+          return defineProp(\"Stream\", require(\"./Stream.js\"));\n\
+      },\n\
+      get WritableStream() {\n\
+          return defineProp(\"WritableStream\", require(\"./WritableStream.js\"));\n\
+      },\n\
+      get ProxyHandler() {\n\
+          return defineProp(\"ProxyHandler\", require(\"./ProxyHandler.js\"));\n\
+      },\n\
+      get DomUtils() {\n\
+          return defineProp(\"DomUtils\", require(\"domutils\"));\n\
+      },\n\
+      get CollectingHandler() {\n\
+          return defineProp(\n\
+              \"CollectingHandler\",\n\
+              require(\"./CollectingHandler.js\")\n\
+          );\n\
+      },\n\
+      // For legacy support\n\
+      DefaultHandler: DomHandler,\n\
+      get RssHandler() {\n\
+          return defineProp(\"RssHandler\", this.FeedHandler);\n\
+      },\n\
+      //helper methods\n\
+      parseDOM: function(data, options) {\n\
+          var handler = new DomHandler(options);\n\
+          new Parser(handler, options).end(data);\n\
+          return handler.dom;\n\
+      },\n\
+      parseFeed: function(feed, options) {\n\
+          var handler = new module.exports.FeedHandler(options);\n\
+          new Parser(handler, options).end(feed);\n\
+          return handler.dom;\n\
+      },\n\
+      createDomStream: function(cb, options, elementCb) {\n\
+          var handler = new DomHandler(cb, options, elementCb);\n\
+          return new Parser(handler, options);\n\
+      },\n\
+      // List of all events that the parser emits\n\
+      EVENTS: {\n\
+          /* Format: eventname: number of arguments */\n\
+          attribute: 2,\n\
+          cdatastart: 0,\n\
+          cdataend: 0,\n\
+          text: 1,\n\
+          processinginstruction: 2,\n\
+          comment: 1,\n\
+          commentend: 0,\n\
+          closetag: 1,\n\
+          opentag: 2,\n\
+          opentagname: 1,\n\
+          error: 1,\n\
+          end: 0\n\
+      }\n\
+    };\n\
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 2);
@@ -814,15 +812,14 @@ TEST(real_world_tests, import_meta) {
 }
 
 TEST(real_world_tests, import_meta_edge_cases) {
-  auto source = "\
-    // Import meta\
-    import.\
-      meta\
-    // Not import meta\
-    a.\
-    import.\
-      meta\
-  ";
+  auto source = R"(    // Import meta
+    import.
+      meta
+    // Not import meta
+    a.
+    import.
+      meta
+)";
   auto result = lexer::parse_commonjs(source);
   ASSERT_FALSE(result.has_value());
   auto err = lexer::get_last_error();
