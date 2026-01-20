@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ubuntu with GCC
+          - os: ubuntu-22.04
+            cxx: g++-12
+            cmake_gen: Ninja
+            cmake_flags: ""
+          # Ubuntu with Clang
+          - os: ubuntu-22.04
+            cxx: clang++-15
+            cmake_gen: Ninja
+            cmake_flags: ""
+          # Ubuntu ARM
+          - os: ubuntu-22.04-arm
+            cxx: g++-12
+            cmake_gen: Ninja
+            cmake_flags: ""
+          # Ubuntu with ASAN (GCC)
+          - os: ubuntu-22.04
+            cxx: g++-12
+            cmake_gen: Ninja
+            cmake_flags: "-DLEXER_SANITIZE=ON"
+            name_suffix: " (ASAN)"
+          # Ubuntu with ASAN (Clang)
+          - os: ubuntu-22.04
+            cxx: clang++-15
+            cmake_gen: Ninja
+            cmake_flags: "-DLEXER_SANITIZE=ON"
+            name_suffix: " (ASAN)"
+          # macOS (Intel)
+          - os: macos-13
+            cxx: clang++
+            cmake_gen: Ninja
+            cmake_flags: ""
+          # macOS (Apple Silicon)
+          - os: macos-14
+            cxx: clang++
+            cmake_gen: Ninja
+            cmake_flags: ""
+          # macOS with ASAN
+          - os: macos-14
+            cxx: clang++
+            cmake_gen: Ninja
+            cmake_flags: "-DLEXER_SANITIZE=ON"
+            name_suffix: " (ASAN)"
+          # Windows
+          - os: windows-latest
+            cmake_gen: Visual Studio 17 2022
+            cmake_arch: x64
+            cmake_config: Release
+            cmake_flags: ""
+
+    name: ${{ matrix.os }} ${{ matrix.cxx || 'MSVC' }}${{ matrix.name_suffix || '' }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Ninja (Ubuntu)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt-get install ninja-build
+
+      - name: Setup Ninja (macOS)
+        if: startsWith(matrix.os, 'macos')
+        run: brew install ninja
+
+      - name: Configure (Unix)
+        if: matrix.os != 'windows-latest'
+        run: cmake -DLEXER_TESTING=ON ${{ matrix.cmake_flags }} -G "${{ matrix.cmake_gen }}" -B build
+        env:
+          CXX: ${{ matrix.cxx }}
+
+      - name: Configure (Windows)
+        if: matrix.os == 'windows-latest'
+        run: cmake -DLEXER_TESTING=ON ${{ matrix.cmake_flags }} -G "${{ matrix.cmake_gen }}" -A ${{ matrix.cmake_arch }} -B build
+
+      - name: Build (Unix)
+        if: matrix.os != 'windows-latest'
+        run: cmake --build build -j4
+
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: cmake --build build --config ${{ matrix.cmake_config }}
+
+      - name: Test (Unix)
+        if: matrix.os != 'windows-latest'
+        run: ctest --output-on-failure --test-dir build
+
+      - name: Test (Windows)
+        if: matrix.os == 'windows-latest'
+        run: ctest -C ${{ matrix.cmake_config }} --output-on-failure --test-dir build
