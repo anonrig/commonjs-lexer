@@ -32,12 +32,12 @@ namespace lexer {
   };
 
   struct lexer_analysis {
-    std::vector<std::string> exports;
-    std::vector<std::string> re_exports;
+    std::vector<std::string_view> exports{};
+    std::vector<std::string_view> re_exports{};
   };
 
   std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents);
-  std::optional<lexer_error> get_last_error();
+  const std::optional<lexer_error>& get_last_error();
 }
 
 #endif  // LEXER_PARSER_H

@@ -20,11 +20,12 @@ enum class RequireType {
 
 // StarExportBinding structure for tracking star export bindings
 struct StarExportBinding {
-  const char* specifier_start;
-  const char* specifier_end;
-  const char* id_start;
-  const char* id_end;
+  std::string_view specifier;
+  std::string_view id;
 };
+
+// Global state for error tracking
+std::optional<lexer_error> last_error;
 
 // Lexer state class
 class CJSLexer {
@@ -48,10 +49,8 @@ private:
   StarExportBinding* starExportStack;
   const StarExportBinding* STAR_EXPORT_STACK_END;
 
-  std::vector<std::string>* exports;
-  std::vector<std::string>* re_exports;
-
-  std::optional<lexer_error> parse_error;
+  std::vector<std::string_view>& exports;
+  std::vector<std::string_view>& re_exports;
 
   // Character classification helpers
   static constexpr bool isBr(char c) {
@@ -80,71 +79,44 @@ private:
   }
 
   // String comparison helpers using string_view for cleaner, more maintainable code
-  bool matchesAt(const char* p, const char* end_pos, std::string_view expected) const {
-    size_t available = end_pos - p;
+  static constexpr bool matchesAt(const char* p, const char* end_pos, std::string_view expected) {
+    size_t available = static_cast<size_t>(end_pos - p);
     if (available < expected.size()) return false;
-    return std::string_view(p, expected.size()) == expected;
+    for (size_t i = 0; i < expected.size(); ++i) {
+      if (p[i] != expected[i]) return false;
+    }
+    return true;
   }
 
   // Character type detection - simplified for ASCII/UTF-8
-  static bool isIdentifierStart(uint8_t ch) {
+  static constexpr bool isIdentifierStart(uint8_t ch) {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' || ch == '$' || ch >= 0x80;
   }
 
-  static bool isIdentifierChar(uint8_t ch) {
+  static constexpr bool isIdentifierChar(uint8_t ch) {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
            (ch >= '0' && ch <= '9') || ch == '_' || ch == '$' || ch >= 0x80;
   }
 
-  bool keywordStart(const char* p) const {
+  constexpr bool keywordStart(const char* p) const {
     return p == source || isBrOrWsOrPunctuatorNotDot(*(p - 1));
   }
 
-  bool readPrecedingKeyword2(const char* p, std::string_view keyword) const {
-    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
-    const char* start = p - keyword.size() + 1;
-    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
-  }
-
-  bool readPrecedingKeyword3(const char* p, std::string_view keyword) const {
-    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
-    const char* start = p - keyword.size() + 1;
-    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
-  }
-
-  bool readPrecedingKeyword4(const char* p, std::string_view keyword) const {
-    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
-    const char* start = p - keyword.size() + 1;
-    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
-  }
-
-  bool readPrecedingKeyword5(const char* p, std::string_view keyword) const {
-    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
-    const char* start = p - keyword.size() + 1;
-    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
-  }
-
-  bool readPrecedingKeyword6(const char* p, std::string_view keyword) const {
-    if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
-    const char* start = p - keyword.size() + 1;
-    return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
-  }
-
-  bool readPrecedingKeyword7(const char* p, std::string_view keyword) const {
+  constexpr bool readPrecedingKeyword(const char* p, std::string_view keyword) const {
     if (p - static_cast<ptrdiff_t>(keyword.size()) + 1 < source) return false;
     const char* start = p - keyword.size() + 1;
     return matchesAt(start, end, keyword) && (start == source || isBrOrWsOrPunctuatorNotDot(*(start - 1)));
   }
 
   // Keyword detection
-  bool isExpressionKeyword(const char* p) const {
+  constexpr bool isExpressionKeyword(const char* p) const {
     switch (*p) {
       case 'd':
         switch (*(p - 1)) {
           case 'i':
-            return readPrecedingKeyword2(p - 2, "vo");
+            return readPrecedingKeyword(p - 2, "vo");
           case 'l':
-            return readPrecedingKeyword3(p - 2, "yie");
+            return readPrecedingKeyword(p - 2, "yie");
           default:
             return false;
         }
@@ -160,7 +132,7 @@ private:
                 return false;
             }
           case 't':
-            return readPrecedingKeyword4(p - 2, "dele");
+            return readPrecedingKeyword(p - 2, "dele");
           default:
             return false;
         }
@@ -169,27 +141,27 @@ private:
           return false;
         switch (*(p - 3)) {
           case 'c':
-            return readPrecedingKeyword6(p - 4, "instan");
+            return readPrecedingKeyword(p - 4, "instan");
           case 'p':
-            return readPrecedingKeyword2(p - 4, "ty");
+            return readPrecedingKeyword(p - 4, "ty");
           default:
             return false;
         }
       case 'n':
         return (p - 1 >= source && *(p - 1) == 'i' && keywordStart(p - 1)) ||
-               readPrecedingKeyword5(p - 1, "retur");
+               readPrecedingKeyword(p - 1, "retur");
       case 'o':
         return p - 1 >= source && *(p - 1) == 'd' && keywordStart(p - 1);
       case 'r':
-        return readPrecedingKeyword7(p - 1, "debugge");
+        return readPrecedingKeyword(p - 1, "debugge");
       case 't':
-        return readPrecedingKeyword4(p - 1, "awai");
+        return readPrecedingKeyword(p - 1, "awai");
       case 'w':
         switch (*(p - 1)) {
           case 'e':
             return p - 2 >= source && *(p - 2) == 'n' && keywordStart(p - 2);
           case 'o':
-            return readPrecedingKeyword3(p - 2, "thr");
+            return readPrecedingKeyword(p - 2, "thr");
           default:
             return false;
         }
@@ -197,13 +169,13 @@ private:
     return false;
   }
 
-  bool isParenKeyword(const char* curPos) const {
-    return readPrecedingKeyword5(curPos, "while") ||
-           readPrecedingKeyword3(curPos, "for") ||
-           readPrecedingKeyword2(curPos, "if");
+  constexpr bool isParenKeyword(const char* curPos) const {
+    return readPrecedingKeyword(curPos, "while") ||
+           readPrecedingKeyword(curPos, "for") ||
+           readPrecedingKeyword(curPos, "if");
   }
 
-  bool isExpressionTerminator(const char* curPos) const {
+  constexpr bool isExpressionTerminator(const char* curPos) const {
     switch (*curPos) {
       case '>':
         return *(curPos - 1) == '=';
@@ -211,19 +183,19 @@ private:
       case ')':
         return true;
       case 'h':
-        return readPrecedingKeyword4(curPos - 1, "catc");
+        return readPrecedingKeyword(curPos - 1, "catc");
       case 'y':
-        return readPrecedingKeyword6(curPos - 1, "finall");
+        return readPrecedingKeyword(curPos - 1, "finall");
       case 'e':
-        return readPrecedingKeyword3(curPos - 1, "els");
+        return readPrecedingKeyword(curPos - 1, "els");
     }
     return false;
   }
 
   // Parsing utilities
   void syntaxError(lexer_error code) {
-    if (!parse_error) {
-      parse_error = code;
+    if (!last_error) {
+      last_error = code;
     }
     pos = end + 1;
   }
@@ -349,14 +321,12 @@ private:
     return true;
   }
 
-  void addExport(const char* start, const char* end_pos) {
+  void addExport(std::string_view export_name) {
     // Skip surrounding quotes if present
-    if (start < end_pos && (*start == '\'' || *start == '"')) {
-      start++;
-      end_pos--;
+    if (!export_name.empty() && (export_name.front() == '\'' || export_name.front() == '"')) {
+      export_name.remove_prefix(1);
+      export_name.remove_suffix(1);
     }
-    // Create string_view to check for duplicates without allocation
-    std::string_view export_name(start, end_pos - start);
 
     // Skip exports that are incomplete Unicode escape sequences
     // A single \u{XXXX} is 8 chars: \u{D83C}
@@ -374,25 +344,21 @@ private:
     }
 
     // Check if this export already exists (avoid duplicates)
-    for (const auto& existing : *exports) {
+    for (const auto& existing : exports) {
       if (existing == export_name) {
         return; // Already exists, skip
       }
     }
-    exports->emplace_back(start, end_pos - start);
+    exports.push_back(export_name);
   }
 
-  void addReexport(const char* start, const char* end_pos) {
+  void addReexport(std::string_view reexport_name) {
     // Skip surrounding quotes if present
-    if (start < end_pos && (*start == '\'' || *start == '"')) {
-      start++;
-      end_pos--;
+    if (!reexport_name.empty() && (reexport_name.front() == '\'' || reexport_name.front() == '"')) {
+      reexport_name.remove_prefix(1);
+      reexport_name.remove_suffix(1);
     }
-    re_exports->emplace_back(start, end_pos - start);
-  }
-
-  void clearReexports() {
-    re_exports->clear();
+    re_exports.push_back(reexport_name);
   }
 
   bool readExportsOrModuleDotExports(char ch) {
@@ -434,12 +400,11 @@ private:
           switch (requireType) {
             case RequireType::ExportStar:
             case RequireType::ExportAssign:
-              addReexport(reexportStart, reexportEnd);
+              addReexport(std::string_view(reexportStart, reexportEnd - reexportStart));
               return true;
             default:
               if (starExportStack < STAR_EXPORT_STACK_END) {
-                starExportStack->specifier_start = reexportStart;
-                starExportStack->specifier_end = reexportEnd;
+                starExportStack->specifier = std::string_view(reexportStart, reexportEnd - reexportStart);
               }
               return true;
           }
@@ -496,7 +461,7 @@ private:
             return;
           }
         }
-        addExport(startPos, endPos);
+        addExport(std::string_view(startPos, endPos - startPos));
       } else if (ch == '\'' || ch == '"') {
         const char* start = pos;
         stringLiteral(ch);
@@ -509,7 +474,7 @@ private:
             pos = revertPos;
             return;
           }
-          addExport(start, end_pos);
+          addExport(std::string_view(start, end_pos - start));
         }
       } else if (ch == '.' && matchesAt(pos + 1, end, "..")) {
         pos += 3;
@@ -548,7 +513,7 @@ private:
           const char* endPos = pos;
           ch = commentWhitespace();
           if (ch == '=') {
-            addExport(startPos, endPos);
+            addExport(std::string_view(startPos, endPos - startPos));
             return;
           }
         }
@@ -566,13 +531,13 @@ private:
           pos++;
           ch = commentWhitespace();
           if (ch != '=') break;
-          addExport(startPos, endPos);
+          addExport(std::string_view(startPos, endPos - startPos));
         }
         break;
       }
       case '=': {
         if (assign) {
-          clearReexports();
+          re_exports.clear();
           pos++;
           ch = commentWhitespace();
           if (ch == '{') {
@@ -603,7 +568,7 @@ private:
     pos = revertPos;
   }
 
-  bool tryParseObjectHasOwnProperty(const char* it_id_start, size_t it_id_len) {
+  bool tryParseObjectHasOwnProperty(std::string_view it_id) {
     char ch = commentWhitespace();
     if (ch != 'O' || !matchesAt(pos + 1, end, "bject")) return false;
     pos += 6;
@@ -636,8 +601,8 @@ private:
     if (ch != ',') return false;
     pos++;
     ch = commentWhitespace();
-    if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) return false;
-    pos += it_id_len;
+    if (!matchesAt(pos, end, it_id)) return false;
+    pos += it_id.size();
     ch = commentWhitespace();
     if (ch != ')') return false;
     pos++;
@@ -697,7 +662,7 @@ private:
             ch = commentWhitespace();
             if (ch != ':') break;
             if (exportStart && exportEnd)
-              addExport(exportStart, exportEnd);
+              addExport(std::string_view(exportStart, exportEnd - exportStart));
             pos = revertPos;
             return;
           } else if (ch == 'g') {
@@ -765,7 +730,7 @@ private:
             ch = commentWhitespace();
             if (ch != ')') break;
             if (exportStart && exportEnd)
-              addExport(exportStart, exportEnd);
+              addExport(std::string_view(exportStart, exportEnd - exportStart));
             return;
           }
           break;
@@ -778,9 +743,9 @@ private:
           if (ch != '(') break;
           pos++;
           ch = commentWhitespace();
-          const char* id_start = pos;
+          const char* id_pos = pos;
           if (!identifier(ch)) break;
-          size_t id_len = pos - id_start;
+          std::string_view id(id_pos, static_cast<size_t>(pos - id_pos));
           ch = commentWhitespace();
           if (ch != ')') break;
 
@@ -802,9 +767,9 @@ private:
           if (ch != '(') break;
           pos++;
           ch = commentWhitespace();
-          const char* it_id_start = pos;
+          const char* it_id_pos = pos;
           if (!identifier(ch)) break;
-          size_t it_id_len = pos - it_id_start;
+          std::string_view it_id(it_id_pos, static_cast<size_t>(pos - it_id_pos));
           ch = commentWhitespace();
           if (ch != ')') break;
           pos++;
@@ -818,8 +783,8 @@ private:
           if (ch != '(') break;
           pos++;
           ch = commentWhitespace();
-          if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-          pos += it_id_len;
+          if (!matchesAt(pos, end, it_id)) break;
+          pos += it_id.size();
           ch = commentWhitespace();
 
           if (ch == '=') {
@@ -837,8 +802,8 @@ private:
             if (ch != '|' || *(pos + 1) != '|') break;
             pos += 2;
             ch = commentWhitespace();
-            if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-            pos += it_id_len;
+            if (!matchesAt(pos, end, it_id)) break;
+            pos += it_id.size();
             ch = commentWhitespace();
             if (ch != '=' || !matchesAt(pos + 1, end, "==")) break;
             pos += 3;
@@ -869,7 +834,7 @@ private:
               pos++;
               const char* ifInnerPos = pos;
 
-              if (tryParseObjectHasOwnProperty(it_id_start, it_id_len)) {
+              if (tryParseObjectHasOwnProperty(it_id)) {
                 ch = commentWhitespace();
                 if (ch != ')') break;
                 pos++;
@@ -893,8 +858,8 @@ private:
               }
 
               if (inIf) {
-                if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-                pos += it_id_len;
+                if (!matchesAt(pos, end, it_id)) break;
+                pos += it_id.size();
                 ch = commentWhitespace();
                 if (ch != 'i' || !matchesAt(pos + 1, end, "n ")) break;
                 pos += 3;
@@ -909,8 +874,8 @@ private:
                 if (ch != '[') break;
                 pos++;
                 ch = commentWhitespace();
-                if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-                pos += it_id_len;
+                if (!matchesAt(pos, end, it_id)) break;
+                pos += it_id.size();
                 ch = commentWhitespace();
                 if (ch != ']') break;
                 pos++;
@@ -918,14 +883,14 @@ private:
                 if (ch != '=' || !matchesAt(pos + 1, end, "==")) break;
                 pos += 3;
                 ch = commentWhitespace();
-                if (pos + id_len > end || memcmp(pos, id_start, id_len) != 0) break;
-                pos += id_len;
+                if (!matchesAt(pos, end, id)) break;
+                pos += id.size();
                 ch = commentWhitespace();
                 if (ch != '[') break;
                 pos++;
                 ch = commentWhitespace();
-                if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-                pos += it_id_len;
+                if (!matchesAt(pos, end, it_id)) break;
+                pos += it_id.size();
                 ch = commentWhitespace();
                 if (ch != ']') break;
                 pos++;
@@ -961,7 +926,7 @@ private:
               pos++;
               ch = commentWhitespace();
               if (ch == 'O' && matchesAt(pos + 1, end, "bject.")) {
-                if (!tryParseObjectHasOwnProperty(it_id_start, it_id_len)) break;
+                if (!tryParseObjectHasOwnProperty(it_id)) break;
               } else if (identifier(ch)) {
                 ch = commentWhitespace();
                 if (ch != '.') break;
@@ -973,8 +938,8 @@ private:
                 if (ch != '(') break;
                 pos++;
                 ch = commentWhitespace();
-                if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-                pos += it_id_len;
+                if (!matchesAt(pos, end, it_id)) break;
+                pos += it_id.size();
                 ch = commentWhitespace();
                 if (ch != ')') break;
                 pos++;
@@ -993,8 +958,8 @@ private:
             if (ch != '[') break;
             pos++;
             ch = commentWhitespace();
-            if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-            pos += it_id_len;
+            if (!matchesAt(pos, end, it_id)) break;
+            pos += it_id.size();
             ch = commentWhitespace();
             if (ch != ']') break;
             pos++;
@@ -1002,14 +967,14 @@ private:
             if (ch != '=') break;
             pos++;
             ch = commentWhitespace();
-            if (pos + id_len > end || memcmp(pos, id_start, id_len) != 0) break;
-            pos += id_len;
+            if (!matchesAt(pos, end, id)) break;
+            pos += id.size();
             ch = commentWhitespace();
             if (ch != '[') break;
             pos++;
             ch = commentWhitespace();
-            if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-            pos += it_id_len;
+            if (!matchesAt(pos, end, it_id)) break;
+            pos += it_id.size();
             ch = commentWhitespace();
             if (ch != ']') break;
             pos++;
@@ -1036,8 +1001,8 @@ private:
             if (ch != ',') break;
             pos++;
             ch = commentWhitespace();
-            if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-            pos += it_id_len;
+            if (!matchesAt(pos, end, it_id)) break;
+            pos += it_id.size();
             ch = commentWhitespace();
             if (ch != ',') break;
             pos++;
@@ -1083,14 +1048,14 @@ private:
             if (ch != 'r' || !matchesAt(pos + 1, end, "eturn")) break;
             pos += 6;
             ch = commentWhitespace();
-            if (pos + id_len > end || memcmp(pos, id_start, id_len) != 0) break;
-            pos += id_len;
+            if (!matchesAt(pos, end, id)) break;
+            pos += id.size();
             ch = commentWhitespace();
             if (ch != '[') break;
             pos++;
             ch = commentWhitespace();
-            if (pos + it_id_len > end || memcmp(pos, it_id_start, it_id_len) != 0) break;
-            pos += it_id_len;
+            if (!matchesAt(pos, end, it_id)) break;
+            pos += it_id.size();
             ch = commentWhitespace();
             if (ch != ']') break;
             pos++;
@@ -1128,9 +1093,8 @@ private:
           // Search through export bindings to see if this is a star export
           StarExportBinding* curCheckBinding = &starExportStack_[0];
           while (curCheckBinding != starExportStack) {
-            if (id_len == static_cast<size_t>(curCheckBinding->id_end - curCheckBinding->id_start) &&
-                memcmp(id_start, curCheckBinding->id_start, id_len) == 0) {
-              addReexport(curCheckBinding->specifier_start, curCheckBinding->specifier_end);
+            if (curCheckBinding->id == id) {
+              addReexport(curCheckBinding->specifier);
               pos = revertPos;
               return;
             }
@@ -1162,17 +1126,16 @@ private:
       if (identifierStart && *bPos == ' ') {
         if (starExportStack == STAR_EXPORT_STACK_END)
           return;
-        starExportStack->id_start = bPos + 1;
-        starExportStack->id_end = id_end + 1;
+        starExportStack->id = std::string_view(bPos + 1, static_cast<size_t>(id_end - bPos));
         while (*bPos == ' ' && bPos > source)
           bPos--;
         switch (*bPos) {
           case 'r':
-            if (!readPrecedingKeyword2(bPos - 1, "va"))
+            if (!readPrecedingKeyword(bPos - 1, "va"))
               return;
             break;
           case 't':
-            if (!readPrecedingKeyword2(bPos - 1, "le") && !readPrecedingKeyword4(bPos - 1, "cons"))
+            if (!readPrecedingKeyword(bPos - 1, "le") && !readPrecedingKeyword(bPos - 1, "cons"))
               return;
             break;
           default:
@@ -1231,13 +1194,15 @@ private:
   }
 
 public:
-  CJSLexer() : source(nullptr), pos(nullptr), end(nullptr), lastTokenPos(nullptr),
-               templateStackDepth(0), openTokenDepth(0), templateDepth(0),
-               lastSlashWasDivision(false), nextBraceIsClass(false),
-               starExportStack(nullptr), STAR_EXPORT_STACK_END(nullptr),
-               exports(nullptr), re_exports(nullptr) {}
+  CJSLexer(std::vector<std::string_view>& out_exports, std::vector<std::string_view>& out_re_exports)
+    : source(nullptr), pos(nullptr), end(nullptr), lastTokenPos(nullptr),
+      templateStackDepth(0), openTokenDepth(0), templateDepth(0),
+      lastSlashWasDivision(false), nextBraceIsClass(false),
+      templateStack_{}, openTokenPosStack_{}, openClassPosStack{},
+      starExportStack_{}, starExportStack(nullptr), STAR_EXPORT_STACK_END(nullptr),
+      exports(out_exports), re_exports(out_re_exports) {}
 
-  bool parse(std::string_view file_contents, std::vector<std::string>& out_exports, std::vector<std::string>& out_re_exports) {
+  bool parse(std::string_view file_contents) {
     source = file_contents.data();
     pos = source - 1;
     end = source + file_contents.size();
@@ -1245,14 +1210,10 @@ public:
     // when checking if '/' should be treated as regex vs division operator
     lastTokenPos = source - 1;
 
-    exports = &out_exports;
-    re_exports = &out_re_exports;
-
     templateStackDepth = 0;
     openTokenDepth = 0;
     templateDepth = std::numeric_limits<uint16_t>::max();
     lastSlashWasDivision = false;
-    parse_error.reset();
     starExportStack = &starExportStack_[0];
     STAR_EXPORT_STACK_END = &starExportStack_[MAX_STAR_EXPORTS - 1];
     nextBraceIsClass = false;
@@ -1416,36 +1377,28 @@ public:
       lastTokenPos = pos;
     }
 
-    if (templateDepth != std::numeric_limits<uint16_t>::max() || openTokenDepth || parse_error) {
+    if (templateDepth != std::numeric_limits<uint16_t>::max() || openTokenDepth || last_error) {
       return false;
     }
 
     return true;
   }
-
-  std::optional<lexer_error> get_error() const {
-    return parse_error;
-  }
 };
-
-// Global state for error tracking
-std::optional<lexer_error> last_error;
 
 std::optional<lexer_analysis> parse_commonjs(const std::string_view file_contents) {
   last_error.reset();
 
   lexer_analysis result;
-  CJSLexer lexer;
+  CJSLexer lexer(result.exports, result.re_exports);
 
-  if (lexer.parse(file_contents, result.exports, result.re_exports)) {
+  if (lexer.parse(file_contents)) {
     return result;
   }
 
-  last_error = lexer.get_error();
   return std::nullopt;
 }
 
-std::optional<lexer_error> get_last_error() {
+const std::optional<lexer_error>& get_last_error() {
   return last_error;
 }
 
