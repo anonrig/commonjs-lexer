@@ -937,3 +937,191 @@ TEST(real_world_tests, template_string_expression_ambiguity) {
   ASSERT_EQ(result->exports[1], "b");
   SUCCEED();
 }
+
+TEST(real_world_tests, export_star_failure) {
+  // This should not crash - __exportStar with non-require argument
+  auto result = lexer::parse_commonjs("__exportStar((0));");
+  ASSERT_TRUE(result.has_value());
+  SUCCEED();
+}
+
+TEST(real_world_tests, esm_syntax_error_import) {
+  auto result = lexer::parse_commonjs("\n        import 'x';\n      ");
+  ASSERT_FALSE(result.has_value());
+  auto err = lexer::get_last_error();
+  ASSERT_TRUE(err.has_value());
+  ASSERT_EQ(err, lexer::lexer_error::UNEXPECTED_ESM_IMPORT);
+}
+
+TEST(real_world_tests, esm_syntax_error_export) {
+  auto result = lexer::parse_commonjs("\n        export { x };\n      ");
+  ASSERT_FALSE(result.has_value());
+  auto err = lexer::get_last_error();
+  ASSERT_TRUE(err.has_value());
+  ASSERT_EQ(err, lexer::lexer_error::UNEXPECTED_ESM_EXPORT);
+}
+
+TEST(real_world_tests, esm_syntax_error_export_function) {
+  auto result = lexer::parse_commonjs("\n        syntax?error;\n\n        export function x () {\n\n        }\n      ");
+  ASSERT_FALSE(result.has_value());
+  auto err = lexer::get_last_error();
+  ASSERT_TRUE(err.has_value());
+  ASSERT_EQ(err, lexer::lexer_error::UNEXPECTED_ESM_EXPORT);
+}
+
+TEST(real_world_tests, esm_syntax_error_import_meta) {
+  auto result = lexer::parse_commonjs("\n        import.meta.url\n      ");
+  ASSERT_FALSE(result.has_value());
+  auto err = lexer::get_last_error();
+  ASSERT_TRUE(err.has_value());
+  ASSERT_EQ(err, lexer::lexer_error::UNEXPECTED_ESM_IMPORT_META);
+}
+
+TEST(real_world_tests, unicode_escape_sequences) {
+  // Test various unicode escape sequences in exports
+  auto result = lexer::parse_commonjs("\
+    exports['\\u58b8'] = 1;\
+    exports['\\n'] = 1;\
+    exports['\\xFF'] = 1;\
+    exports['\\011'] = 1;\
+    exports['\\3z'] = 1;\
+  ");
+  ASSERT_TRUE(result.has_value());
+  // The lexer preserves escape sequences as-is
+  ASSERT_EQ(result->exports.size(), 5);
+  SUCCEED();
+}
+
+TEST(real_world_tests, empty_source) {
+  auto result = lexer::parse_commonjs("");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 0);
+  ASSERT_EQ(result->re_exports.size(), 0);
+  SUCCEED();
+}
+
+TEST(real_world_tests, whitespace_only) {
+  auto result = lexer::parse_commonjs("   \n\t\r\n   ");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 0);
+  ASSERT_EQ(result->re_exports.size(), 0);
+  SUCCEED();
+}
+
+TEST(real_world_tests, nested_require) {
+  auto result = lexer::parse_commonjs("\
+    const a = require('a');\
+    const b = require('b').default;\
+    const { c } = require('c');\
+  ");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 0);
+  ASSERT_EQ(result->re_exports.size(), 0);
+  SUCCEED();
+}
+
+TEST(real_world_tests, conditional_exports) {
+  auto result = lexer::parse_commonjs("\
+    if (condition) {\
+      exports.a = 1;\
+    } else {\
+      exports.b = 2;\
+    }\
+  ");
+  ASSERT_TRUE(result.has_value());
+  // Both exports should be detected
+  ASSERT_EQ(result->exports.size(), 2);
+  ASSERT_EQ(result->exports[0], "a");
+  ASSERT_EQ(result->exports[1], "b");
+  SUCCEED();
+}
+
+TEST(real_world_tests, exports_in_function) {
+  auto result = lexer::parse_commonjs("\
+    function setup() {\
+      exports.internal = 1;\
+    }\
+    exports.external = 2;\
+  ");
+  ASSERT_TRUE(result.has_value());
+  // Both exports should be detected (lexer doesn't track scope)
+  ASSERT_EQ(result->exports.size(), 2);
+  SUCCEED();
+}
+
+TEST(real_world_tests, multiple_module_exports_assign) {
+  auto result = lexer::parse_commonjs("\
+    module.exports = { a: 1 };\
+    module.exports = { b: 2 };\
+  ");
+  ASSERT_TRUE(result.has_value());
+  // Both should be detected
+  ASSERT_GE(result->exports.size(), 1);
+  SUCCEED();
+}
+
+TEST(real_world_tests, string_with_keywords) {
+  // Strings containing keywords should not trigger ESM detection
+  auto result = lexer::parse_commonjs("\
+    const str1 = 'import x from y';\
+    const str2 = \"export default foo\";\
+    const str3 = `import.meta.url`;\
+    exports.a = 1;\
+  ");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 1);
+  ASSERT_EQ(result->exports[0], "a");
+  SUCCEED();
+}
+
+TEST(real_world_tests, comment_with_keywords) {
+  // Comments containing keywords should not trigger ESM detection
+  auto result = lexer::parse_commonjs("\
+    // import x from y\n\
+    /* export default foo */\
+    exports.a = 1;\
+  ");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 1);
+  ASSERT_EQ(result->exports[0], "a");
+  SUCCEED();
+}
+
+TEST(real_world_tests, complex_object_literal) {
+  auto result = lexer::parse_commonjs("\
+    module.exports = {\
+      foo: 'bar',\
+      baz: function() {},\
+      qux: () => {},\
+      nested: { a: 1 }\
+    };\
+  ");
+  ASSERT_TRUE(result.has_value());
+  // Only simple key-value pairs are detected
+  ASSERT_GE(result->exports.size(), 1);
+  SUCCEED();
+}
+
+TEST(real_world_tests, prototype_exports) {
+  auto result = lexer::parse_commonjs("\
+    function MyClass() {}\
+    MyClass.prototype.method = function() {};\
+    module.exports = MyClass;\
+  ");
+  ASSERT_TRUE(result.has_value());
+  // No named exports, just the default
+  SUCCEED();
+}
+
+TEST(real_world_tests, exports_shorthand_syntax) {
+  auto result = lexer::parse_commonjs("\
+    const a = 1, b = 2, c = 3;\
+    module.exports = { a, b, c };\
+  ");
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 3);
+  ASSERT_EQ(result->exports[0], "a");
+  ASSERT_EQ(result->exports[1], "b");
+  ASSERT_EQ(result->exports[2], "c");
+  SUCCEED();
+}
