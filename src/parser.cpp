@@ -37,7 +37,6 @@ private:
   uint16_t templateStackDepth;
   uint16_t openTokenDepth;
   uint16_t templateDepth;
-  uint16_t braceDepth;
 
   bool lastSlashWasDivision;
   bool nextBraceIsClass;
@@ -358,7 +357,7 @@ private:
     }
     // Create string_view to check for duplicates without allocation
     std::string_view export_name(start, end_pos - start);
-    
+
     // Skip exports that are incomplete Unicode escape sequences
     // A single \u{XXXX} is 8 chars: \u{D83C}
     // Complete emoji like \u{D83C}\u{DF10} is 16 chars
@@ -367,13 +366,13 @@ private:
         export_name[0] == '\\' && export_name[1] == 'u' && export_name[2] == '{' &&
         export_name[7] == '}') {
       // Check if it's in surrogate pair range (D800-DFFF)
-      if (export_name[3] == 'D' && 
+      if (export_name[3] == 'D' &&
           ((export_name[4] >= '8' && export_name[4] <= '9') ||
            (export_name[4] >= 'A' && export_name[4] <= 'F'))) {
         return; // Skip incomplete surrogate pairs
       }
     }
-    
+
     // Check if this export already exists (avoid duplicates)
     for (const auto& existing : *exports) {
       if (existing == export_name) {
@@ -472,7 +471,7 @@ private:
       if (identifier(ch)) {
         const char* endPos = pos;
         ch = commentWhitespace();
-        
+
         // Check if this is a getter syntax: get identifier()
         if (ch != ':' && endPos - startPos == 3 && matchesAt(startPos, end, "get")) {
           // Skip getter: get identifier() { ... }
@@ -488,7 +487,7 @@ private:
           pos = revertPos;
           return;
         }
-        
+
         if (ch == ':') {
           pos++;
           ch = commentWhitespace();
@@ -1233,7 +1232,7 @@ private:
 
 public:
   CJSLexer() : source(nullptr), pos(nullptr), end(nullptr), lastTokenPos(nullptr),
-               templateStackDepth(0), openTokenDepth(0), templateDepth(0), braceDepth(0),
+               templateStackDepth(0), openTokenDepth(0), templateDepth(0),
                lastSlashWasDivision(false), nextBraceIsClass(false),
                starExportStack(nullptr), STAR_EXPORT_STACK_END(nullptr),
                exports(nullptr), re_exports(nullptr) {}
@@ -1388,7 +1387,7 @@ public:
             // Check if lastTokenPos is before the source (start of input)
             bool isStartOfInput = lastTokenPos < source;
             char lastToken = isStartOfInput ? '\0' : *lastTokenPos;
-            
+
             if ((isExpressionPunctuator(lastToken) &&
                  !(lastToken == '.' && lastTokenPos > source && *(lastTokenPos - 1) >= '0' && *(lastTokenPos - 1) <= '9') &&
                  !(lastToken == '+' && lastTokenPos > source && *(lastTokenPos - 1) == '+') &&
