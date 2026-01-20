@@ -1,3 +1,0 @@
-/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/CMakeFiles/gtest-populate.dir
-/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/CMakeFiles/edit_cache.dir
-/home/runner/work/commonjs-lexer/commonjs-lexer/_codeql_build_dir/_deps/gtest-subbuild/CMakeFiles/rebuild_cache.dir

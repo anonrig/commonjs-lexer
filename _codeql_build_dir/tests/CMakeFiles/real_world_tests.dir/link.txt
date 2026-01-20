@@ -1,1 +1,0 @@
-/home/runner/work/commonjs-lexer/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/real_world_tests.dir/link.d CMakeFiles/real_world_tests.dir/real_world_tests.cpp.o -o real_world_tests  ../src/liblexer.a ../lib/libgtest_main.a ../lib/libgtest.a
