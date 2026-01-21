@@ -1,8 +1,6 @@
 #include "lexer/parser.h"
-#include <algorithm>
 #include <array>
 #include <cstdint>
-#include <cstring>
 #include <limits>
 
 namespace lexer {
@@ -140,11 +138,6 @@ inline void encodeUtf8(std::string& out, uint32_t codepoint) {
   }
 }
 
-// Check if codepoint is a surrogate (invalid standalone Unicode)
-inline bool isSurrogate(uint32_t codepoint) {
-  return codepoint >= 0xD800 && codepoint <= 0xDFFF;
-}
-
 // Unescape JavaScript string escape sequences
 // Returns empty optional on invalid escape sequences (like lone surrogates)
 std::optional<std::string> unescapeJsString(std::string_view str) {
@@ -197,7 +190,7 @@ std::optional<std::string> unescapeJsString(std::string_view str) {
           // Handle surrogate pairs in \u{XXXX} format
           if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
             // High surrogate - check for low surrogate \u{XXXX}
-            if (end_brace + 3 < str.size() && str[end_brace + 1] == '\\' && 
+            if (end_brace + 3 < str.size() && str[end_brace + 1] == '\\' &&
                 str[end_brace + 2] == 'u' && str[end_brace + 3] == '{') {
               size_t low_start = end_brace + 4;
               size_t low_end = str.find('}', low_start);
