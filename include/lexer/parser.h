@@ -1,6 +1,8 @@
 #ifndef LEXER_PARSER_H
 #define LEXER_PARSER_H
 
+#include "lexer/version.h"
+
 #include <optional>
 #include <string>
 #include <string_view>
