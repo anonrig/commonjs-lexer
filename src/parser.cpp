@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <limits>
 
+#ifdef LEXER_USE_SIMDUTF
+#include <simdutf.h>
+#endif
+
 namespace lexer {
 
 // ============================================================================
@@ -121,6 +125,13 @@ inline int hexDigit(unsigned char c) {
 
 // Encode a Unicode code point as UTF-8 into the output string
 inline void encodeUtf8(std::string& out, uint32_t codepoint) {
+#ifdef LEXER_USE_SIMDUTF
+  // Use simdutf for optimized UTF-32 to UTF-8 conversion
+  char buf[4];
+  size_t len = simdutf::convert_utf32_to_utf8(
+      reinterpret_cast<const char32_t*>(&codepoint), 1, buf);
+  out.append(buf, len);
+#else
   if (codepoint <= 0x7F) {
     out.push_back(static_cast<char>(codepoint));
   } else if (codepoint <= 0x7FF) {
@@ -136,6 +147,7 @@ inline void encodeUtf8(std::string& out, uint32_t codepoint) {
     out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
     out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
   }
+#endif
 }
 
 // Unescape JavaScript string escape sequences
@@ -591,7 +603,15 @@ private:
 
   // Check if string contains escape sequences
   static bool needsUnescaping(std::string_view str) {
+#ifdef LEXER_USE_SIMDUTF
+    // simdutf provides fast SIMD-based ASCII validation
+    // If the string is valid ASCII without high bytes, we can use a faster path
+    // But we still need to check for backslash
+    const char* ptr = simdutf::find(str.data(), str.data() + str.size(), '\\');
+    return ptr != str.data() + str.size();
+#else
     return str.find('\\') != std::string_view::npos;
+#endif
   }
 
   void addExport(std::string_view export_name) {

@@ -1,5 +1,6 @@
 option(LEXER_LOGGING "verbose output (useful for debugging)" OFF)
 option(LEXER_SANITIZE "Sanitize addresses" OFF)
+option(LEXER_USE_SIMDUTF "Use simdutf for optimized string operations" OFF)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   option(LEXER_SANITIZE_BOUNDS_STRICT "Sanitize bounds (strict): only for GCC" OFF)
 endif()

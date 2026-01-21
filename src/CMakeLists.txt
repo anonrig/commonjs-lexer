@@ -55,3 +55,8 @@ endif()
 if(LEXER_LOGGING)
   target_compile_definitions(lexer PRIVATE LEXER_LOGGING=1)
 endif()
+
+if(LEXER_USE_SIMDUTF)
+  target_link_libraries(lexer PRIVATE simdutf)
+  target_compile_definitions(lexer PRIVATE LEXER_USE_SIMDUTF=1)
+endif()

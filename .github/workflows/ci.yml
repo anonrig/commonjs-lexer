@@ -75,6 +75,18 @@ jobs:
             cmake_arch: x64
             cmake_config: Release
             cmake_flags: ""
+          # Ubuntu with simdutf
+          - os: ubuntu-latest
+            cxx: g++-13
+            cmake_gen: Ninja
+            cmake_flags: "-DLEXER_USE_SIMDUTF=ON"
+            name_suffix: " (simdutf)"
+          # Ubuntu with simdutf + ASAN
+          - os: ubuntu-latest
+            cxx: g++-13
+            cmake_gen: Ninja
+            cmake_flags: "-DLEXER_USE_SIMDUTF=ON -DLEXER_SANITIZE=ON"
+            name_suffix: " (simdutf, ASAN)"
 
     name: ${{ matrix.os }} ${{ matrix.cxx || 'MSVC' }}${{ matrix.name_suffix || '' }}
     runs-on: ${{ matrix.os }}

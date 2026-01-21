@@ -11,6 +11,31 @@ set(LEXER_LIB_SOVERSION "1" CACHE STRING "lexer library soversion")
 
 include(GNUInstallDirs)
 
+# Optional simdutf support for optimized string operations
+if(LEXER_USE_SIMDUTF)
+  # Try to find simdutf system package first
+  find_package(simdutf QUIET)
+  if(NOT simdutf_FOUND)
+    include(cmake/CPM.cmake)
+    find_package(Git QUIET)
+    if(Git_FOUND)
+      CPMAddPackage(
+        NAME simdutf
+        GITHUB_REPOSITORY simdutf/simdutf
+        VERSION 8.0.0
+        OPTIONS "SIMDUTF_TESTS OFF" "SIMDUTF_BENCHMARKS OFF" "SIMDUTF_TOOLS OFF"
+      )
+      set(simdutf_FOUND TRUE)
+    endif()
+  endif()
+  if(simdutf_FOUND)
+    message(STATUS "simdutf enabled for optimized string operations")
+  else()
+    message(WARNING "simdutf requested but not found, building without it")
+    set(LEXER_USE_SIMDUTF OFF)
+  endif()
+endif()
+
 include(CTest)
 include(cmake/lexer-flags.cmake)
 

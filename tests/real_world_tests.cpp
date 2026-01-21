@@ -32,7 +32,7 @@ TEST(real_world_tests, getter_opt_outs) {
   // The lexer doesn't evaluate conditionals like if(false), so the first
   // Object.defineProperty with enumerable:true is detected as an export
   ASSERT_EQ(result->exports.size(), 1);
-  ASSERT_EQ(result->exports[0], "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
   SUCCEED();
 }
 
@@ -55,13 +55,13 @@ TEST(real_world_tests, typescript_reexports) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 2);
-  ASSERT_EQ(result->exports[0], "__esModule");
-  ASSERT_EQ(result->exports[1], "colorFactory");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "__esModule");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "colorFactory");
   ASSERT_EQ(result->re_exports.size(), 4);
-  ASSERT_EQ(result->re_exports[0], "external1");
-  ASSERT_EQ(result->re_exports[1], "external2");
-  ASSERT_EQ(result->re_exports[2], "external3");
-  ASSERT_EQ(result->re_exports[3], "external4");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[0]), "external1");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[1]), "external2");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[2]), "external3");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[3]), "external4");
   SUCCEED();
 }
 
@@ -107,10 +107,10 @@ TEST(real_world_tests, rollup_babel_reexport_getter) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 4);
-  ASSERT_EQ(result->exports[0], "a");
-  ASSERT_EQ(result->exports[1], "c");
-  ASSERT_EQ(result->exports[2], "d");
-  ASSERT_EQ(result->exports[3], "e");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "c");
+  ASSERT_EQ(lexer::get_string_view(result->exports[2]), "d");
+  ASSERT_EQ(lexer::get_string_view(result->exports[3]), "e");
   SUCCEED();
 }
 
@@ -368,23 +368,23 @@ TEST(real_world_tests, rollup_babel_reexports) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 1);
-  ASSERT_EQ(result->exports[0], "__esModule");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "__esModule");
   ASSERT_EQ(result->re_exports.size(), 15);
-  ASSERT_EQ(result->re_exports[0], "external");
-  ASSERT_EQ(result->re_exports[1], "external2");
-  ASSERT_EQ(result->re_exports[2], "external001");
-  ASSERT_EQ(result->re_exports[3], "external003");
-  ASSERT_EQ(result->re_exports[4], "external002");
-  ASSERT_EQ(result->re_exports[5], "external004");
-  ASSERT_EQ(result->re_exports[6], "external3");
-  ASSERT_EQ(result->re_exports[7], "external4");
-  ASSERT_EQ(result->re_exports[8], "external😃");
-  ASSERT_EQ(result->re_exports[9], "e5");
-  ASSERT_EQ(result->re_exports[10], "e6");
-  ASSERT_EQ(result->re_exports[11], "external𤭢");
-  ASSERT_EQ(result->re_exports[12], "./styles");
-  ASSERT_EQ(result->re_exports[13], "./styles2");
-  ASSERT_EQ(result->re_exports[14], "./Accordion");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[0]), "external");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[1]), "external2");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[2]), "external001");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[3]), "external003");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[4]), "external002");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[5]), "external004");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[6]), "external3");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[7]), "external4");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[8]), "external😃");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[9]), "e5");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[10]), "e6");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[11]), "external𤭢");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[12]), "./styles");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[13]), "./styles2");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[14]), "./Accordion");
   SUCCEED();
 }
 
@@ -401,11 +401,11 @@ TEST(real_world_tests, module_exports_reexport_spread) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 2);
-  ASSERT_EQ(result->exports[0], "c");
-  ASSERT_EQ(result->exports[1], "name");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "c");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "name");
   ASSERT_EQ(result->re_exports.size(), 2);
-  ASSERT_EQ(result->re_exports[0], "dep1");
-  ASSERT_EQ(result->re_exports[1], "dep2");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[0]), "dep1");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[1]), "dep2");
   SUCCEED();
 }
 
@@ -490,7 +490,7 @@ TEST(real_world_tests, shebang) {
     auto result = lexer::parse_commonjs("#! (  {\n      exports.asdf = 'asdf';\n    ");
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->exports.size(), 1);
-    ASSERT_EQ(result->exports[0], "asdf");
+    ASSERT_EQ(lexer::get_string_view(result->exports[0]), "asdf");
   }
   SUCCEED();
 }
@@ -501,7 +501,7 @@ TEST(real_world_tests, module_exports) {\
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 1);
-  ASSERT_EQ(result->exports[0], "asdf");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "asdf");
   SUCCEED();
 }
 
@@ -521,18 +521,21 @@ TEST(real_world_tests, non_identifiers) {\
     exports.var = 'RESERVED';\
   ");
   ASSERT_TRUE(result.has_value());
+  // Note: \u{D83C} alone is a lone high surrogate, which is invalid and skipped
+  // But \u{D83C}\u{DF10} together form a valid surrogate pair for U+1F310 (🌐)
   ASSERT_EQ(result->exports.size(), 11);
-  ASSERT_EQ(result->exports[0], "ab cd");
-  ASSERT_EQ(result->exports[1], "not identifier");
-  ASSERT_EQ(result->exports[2], "\\u{D83C}\\u{DF10}");
-  ASSERT_EQ(result->exports[3], "\\'");
-  ASSERT_EQ(result->exports[4], "@notidentifier");
-  ASSERT_EQ(result->exports[5], "%notidentifier");
-  ASSERT_EQ(result->exports[6], "hm🤔");
-  ASSERT_EQ(result->exports[7], "⨉");
-  ASSERT_EQ(result->exports[8], "α");
-  ASSERT_EQ(result->exports[9], "package");
-  ASSERT_EQ(result->exports[10], "var");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "ab cd");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "not identifier");
+  ASSERT_EQ(lexer::get_string_view(result->exports[2]), "🌐");  // \u{D83C}\u{DF10} -> U+1F310
+  // exports[3] would be \u{D83C} but it's skipped (lone surrogate)
+  ASSERT_EQ(lexer::get_string_view(result->exports[3]), "'");   // \\' -> '
+  ASSERT_EQ(lexer::get_string_view(result->exports[4]), "@notidentifier");
+  ASSERT_EQ(lexer::get_string_view(result->exports[5]), "%notidentifier");
+  ASSERT_EQ(lexer::get_string_view(result->exports[6]), "hm🤔");
+  ASSERT_EQ(lexer::get_string_view(result->exports[7]), "⨉");
+  ASSERT_EQ(lexer::get_string_view(result->exports[8]), "α");
+  ASSERT_EQ(lexer::get_string_view(result->exports[9]), "package");
+  ASSERT_EQ(lexer::get_string_view(result->exports[10]), "var");
   SUCCEED();
 }
 
@@ -542,10 +545,10 @@ TEST(real_world_tests, literal_exports) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 4);
-  ASSERT_EQ(result->exports[0], "a");
-  ASSERT_EQ(result->exports[1], "b");
-  ASSERT_EQ(result->exports[2], "d");
-  ASSERT_EQ(result->exports[3], "e");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "b");
+  ASSERT_EQ(lexer::get_string_view(result->exports[2]), "d");
+  ASSERT_EQ(lexer::get_string_view(result->exports[3]), "e");
   SUCCEED();
 }
 
@@ -555,7 +558,7 @@ TEST(real_world_tests, literal_exports_unsupported) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 1);
-  ASSERT_EQ(result->exports[0], "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
   SUCCEED();
 }
 
@@ -577,7 +580,7 @@ TEST(real_world_tests, literal_exports_example) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 3);
-  ASSERT_EQ(result->exports[2], "e");
+  ASSERT_EQ(lexer::get_string_view(result->exports[2]), "e");
   SUCCEED();
 }
 
@@ -655,8 +658,8 @@ TEST(real_world_tests, literal_exports_complex) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 2);
-  ASSERT_EQ(result->exports[0], "Parser");
-  ASSERT_EQ(result->exports[1], "Tokenizer");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "Parser");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "Tokenizer");
   SUCCEED();
 }
 
@@ -699,9 +702,9 @@ TEST(real_world_tests, define_property_value) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 3);
-  ASSERT_EQ(result->exports[0], "thing");
-  ASSERT_EQ(result->exports[1], "other");
-  ASSERT_EQ(result->exports[2], "__esModule");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "thing");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "other");
+  ASSERT_EQ(lexer::get_string_view(result->exports[2]), "__esModule");
   SUCCEED();
 }
 
@@ -715,9 +718,9 @@ TEST(real_world_tests, module_assign) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 1);
-  ASSERT_EQ(result->exports[0], "asdf");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "asdf");
   ASSERT_EQ(result->re_exports.size(), 1);
-  ASSERT_EQ(result->re_exports[0], "./another");
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[0]), "./another");
   SUCCEED();
 }
 
@@ -933,8 +936,8 @@ TEST(real_world_tests, template_string_expression_ambiguity) {
   auto result = lexer::parse_commonjs(source);
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 2);
-  ASSERT_EQ(result->exports[0], "a");
-  ASSERT_EQ(result->exports[1], "b");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "b");
   SUCCEED();
 }
 
@@ -1031,8 +1034,8 @@ TEST(real_world_tests, conditional_exports) {
   ASSERT_TRUE(result.has_value());
   // Both exports should be detected
   ASSERT_EQ(result->exports.size(), 2);
-  ASSERT_EQ(result->exports[0], "a");
-  ASSERT_EQ(result->exports[1], "b");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "b");
   SUCCEED();
 }
 
@@ -1072,7 +1075,7 @@ TEST(real_world_tests, string_with_keywords) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 1);
-  ASSERT_EQ(result->exports[0], "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
   SUCCEED();
 }
 
@@ -1085,7 +1088,7 @@ TEST(real_world_tests, comment_with_keywords) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 1);
-  ASSERT_EQ(result->exports[0], "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
   SUCCEED();
 }
 
@@ -1124,8 +1127,8 @@ TEST(real_world_tests, exports_shorthand_syntax) {
   ");
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->exports.size(), 3);
-  ASSERT_EQ(result->exports[0], "a");
-  ASSERT_EQ(result->exports[1], "b");
-  ASSERT_EQ(result->exports[2], "c");
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "b");
+  ASSERT_EQ(lexer::get_string_view(result->exports[2]), "c");
   SUCCEED();
 }

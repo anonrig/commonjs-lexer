@@ -7,7 +7,8 @@ A fast C++ lexer for extracting named exports from CommonJS modules. This librar
 - **Fast**: Zero-copy parsing for most exports using `std::string_view`
 - **Accurate**: Handles complex CommonJS patterns including re-exports, Object.defineProperty, and transpiler output
 - **Unicode Support**: Properly unescapes JavaScript string literals including `\u{XXXX}` and surrogate pairs
-- **No Dependencies**: Single-header distribution available
+- **Optional SIMD Acceleration**: Can use [simdutf](https://github.com/simdutf/simdutf) for faster string operations
+- **No Dependencies**: Single-header distribution available (simdutf is optional)
 - **Cross-Platform**: Works on Linux, macOS, and Windows
 
 ## Installation
@@ -238,6 +239,21 @@ cmake --build . --target real_world_tests
 |--------|---------|-------------|
 | `LEXER_TESTING` | `ON` | Build test suite |
 | `LEXER_BENCHMARKS` | `OFF` | Build benchmarks |
+| `LEXER_USE_SIMDUTF` | `OFF` | Use simdutf for optimized string operations |
+| `LEXER_SANITIZE` | `OFF` | Enable address sanitizer |
+
+### Building with simdutf
+
+To enable SIMD-accelerated string operations:
+
+```bash
+cmake -B build -DLEXER_USE_SIMDUTF=ON
+cmake --build build
+```
+
+When `LEXER_USE_SIMDUTF=ON`, CMake will automatically fetch simdutf via CPM if it's not found on the system. The library uses simdutf's optimized `find()` function for faster escape sequence detection.
+
+For projects that already have simdutf available (like Node.js), define `LEXER_USE_SIMDUTF=1` and ensure the simdutf header is in the include path.
 
 ## Performance
 
@@ -246,8 +262,16 @@ The lexer is optimized for speed:
 - Single-pass parsing with no backtracking
 - Zero-copy for most export names using `std::string_view`
 - String allocation only when unescaping is required
-- Efficient character classification using lookup tables
+- Compile-time lookup tables using C++20 `consteval`
+- Optional SIMD acceleration via simdutf for escape sequence detection
 
 ## License
 
-MIT License - see [LICENSE-MIT](LICENSE-MIT) for details.
+Licensed under either of
+
+ * Apache License, Version 2.0
+   ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license
+   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
