@@ -1,4 +1,4 @@
-set(LEXER_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../)
+set(MERVE_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../)
 if(MSVC)
   add_compile_options("/Zi" "/EHsc" "/GR")
   add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
@@ -6,7 +6,7 @@ if(MSVC)
 endif()
 
 include(${PROJECT_SOURCE_DIR}/cmake/add-cpp-test.cmake)
-link_libraries(lexer)
+link_libraries(merve)
 
 if(MSVC AND BUILD_SHARED_LIBS)
   message(STATUS "For some tests we use Google Test and it fails when building a DLL.")

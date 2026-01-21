@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <limits>
 
-#ifdef LEXER_USE_SIMDUTF
+#ifdef MERVE_USE_SIMDUTF
 #include <simdutf.h>
 #endif
 
@@ -125,7 +125,7 @@ inline int hexDigit(unsigned char c) {
 
 // Encode a Unicode code point as UTF-8 into the output string
 inline void encodeUtf8(std::string& out, uint32_t codepoint) {
-#ifdef LEXER_USE_SIMDUTF
+#ifdef MERVE_USE_SIMDUTF
   // Use simdutf for optimized UTF-32 to UTF-8 conversion
   char buf[4];
   size_t len = simdutf::convert_utf32_to_utf8(
@@ -603,7 +603,7 @@ private:
 
   // Check if string contains escape sequences
   static bool needsUnescaping(std::string_view str) {
-#ifdef LEXER_USE_SIMDUTF
+#ifdef MERVE_USE_SIMDUTF
     // simdutf provides fast SIMD-based ASCII validation
     // If the string is valid ASCII without high bytes, we can use a faster path
     // But we still need to check for backslash

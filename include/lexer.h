@@ -1,6 +1,6 @@
-#ifndef LEXER_H
-#define LEXER_H
+#ifndef MERVE_H
+#define MERVE_H
 
 #include "lexer/parser.h"
 
-#endif  // LEXER_H
+#endif  // MERVE_H

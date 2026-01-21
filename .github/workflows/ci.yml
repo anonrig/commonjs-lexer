@@ -45,13 +45,13 @@ jobs:
           - os: ubuntu-22.04
             cxx: g++-12
             cmake_gen: Ninja
-            cmake_flags: "-DLEXER_SANITIZE=ON"
+            cmake_flags: "-DMERVE_SANITIZE=ON"
             name_suffix: " (ASAN)"
           # Ubuntu with ASAN (Clang)
           - os: ubuntu-22.04
             cxx: clang++-15
             cmake_gen: Ninja
-            cmake_flags: "-DLEXER_SANITIZE=ON"
+            cmake_flags: "-DMERVE_SANITIZE=ON"
             name_suffix: " (ASAN)"
           # macOS 14
           - os: macos-14
@@ -67,7 +67,7 @@ jobs:
           - os: macos-15
             cxx: clang++
             cmake_gen: Ninja
-            cmake_flags: "-DLEXER_SANITIZE=ON"
+            cmake_flags: "-DMERVE_SANITIZE=ON"
             name_suffix: " (ASAN)"
           # Windows
           - os: windows-latest
@@ -79,13 +79,13 @@ jobs:
           - os: ubuntu-latest
             cxx: g++-13
             cmake_gen: Ninja
-            cmake_flags: "-DLEXER_USE_SIMDUTF=ON"
+            cmake_flags: "-DMERVE_USE_SIMDUTF=ON"
             name_suffix: " (simdutf)"
           # Ubuntu with simdutf + ASAN
           - os: ubuntu-latest
             cxx: g++-13
             cmake_gen: Ninja
-            cmake_flags: "-DLEXER_USE_SIMDUTF=ON -DLEXER_SANITIZE=ON"
+            cmake_flags: "-DMERVE_USE_SIMDUTF=ON -DMERVE_SANITIZE=ON"
             name_suffix: " (simdutf, ASAN)"
 
     name: ${{ matrix.os }} ${{ matrix.cxx || 'MSVC' }}${{ matrix.name_suffix || '' }}
@@ -103,13 +103,13 @@ jobs:
 
       - name: Configure (Unix)
         if: matrix.os != 'windows-latest'
-        run: cmake -DLEXER_TESTING=ON ${{ matrix.cmake_flags }} -G "${{ matrix.cmake_gen }}" -B build
+        run: cmake -DMERVE_TESTING=ON ${{ matrix.cmake_flags }} -G "${{ matrix.cmake_gen }}" -B build
         env:
           CXX: ${{ matrix.cxx }}
 
       - name: Configure (Windows)
         if: matrix.os == 'windows-latest'
-        run: cmake -DLEXER_TESTING=ON ${{ matrix.cmake_flags }} -G "${{ matrix.cmake_gen }}" -A ${{ matrix.cmake_arch }} -B build
+        run: cmake -DMERVE_TESTING=ON ${{ matrix.cmake_flags }} -G "${{ matrix.cmake_gen }}" -A ${{ matrix.cmake_arch }} -B build
 
       - name: Build (Unix)
         if: matrix.os != 'windows-latest'

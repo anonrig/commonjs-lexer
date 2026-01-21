@@ -1,5 +1,5 @@
-#ifndef LEXER_PARSER_H
-#define LEXER_PARSER_H
+#ifndef MERVE_PARSER_H
+#define MERVE_PARSER_H
 
 #include "lexer/version.h"
 
@@ -132,4 +132,4 @@ const std::optional<lexer_error>& get_last_error();
 
 }  // namespace lexer
 
-#endif  // LEXER_PARSER_H
+#endif  // MERVE_PARSER_H

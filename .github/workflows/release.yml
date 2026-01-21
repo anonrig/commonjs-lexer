@@ -54,15 +54,15 @@ jobs:
 
       - name: Build singleheader
         run: |
-          cmake -DLEXER_TESTING=OFF -G Ninja -B build
-          cmake --build build --target lexer-singleheader-lib
+          cmake -DMERVE_TESTING=OFF -G Ninja -B build
+          cmake --build build --target merve-singleheader-lib
 
       - name: Create singleheader.zip
         run: |
           cd build/singleheader
-          zip singleheader.zip lexer.h lexer.cpp
+          zip singleheader.zip merve.h merve.cpp
           mv singleheader.zip ../../singleheader/
-          cp lexer.h lexer.cpp ../../singleheader/
+          cp merve.h merve.cpp ../../singleheader/
 
       - name: Create release
         run: ./tools/release/create_release.py

@@ -1,4 +1,4 @@
-# commonjs-lexer
+# merve
 
 A fast C++ lexer for extracting named exports from CommonJS modules. This library performs static analysis to detect CommonJS export patterns without executing the code.
 
@@ -18,18 +18,18 @@ A fast C++ lexer for extracting named exports from CommonJS modules. This librar
 ```cmake
 include(FetchContent)
 FetchContent_Declare(
-  commonjs-lexer
-  GIT_REPOSITORY https://github.com/user/commonjs-lexer.git
+  merve
+  GIT_REPOSITORY https://github.com/anonrig/merve.git
   GIT_TAG main
 )
-FetchContent_MakeAvailable(commonjs-lexer)
+FetchContent_MakeAvailable(merve)
 
 target_link_libraries(your_target PRIVATE lexer::lexer)
 ```
 
 ### Single Header
 
-Copy `singleheader/lexer.h` and `singleheader/lexer.cpp` to your project.
+Copy `singleheader/merve.h` and `singleheader/merve.cpp` to your project.
 
 ## Usage
 
@@ -237,23 +237,23 @@ cmake --build . --target real_world_tests
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `LEXER_TESTING` | `ON` | Build test suite |
-| `LEXER_BENCHMARKS` | `OFF` | Build benchmarks |
-| `LEXER_USE_SIMDUTF` | `OFF` | Use simdutf for optimized string operations |
-| `LEXER_SANITIZE` | `OFF` | Enable address sanitizer |
+| `MERVE_TESTING` | `ON` | Build test suite |
+| `MERVE_BENCHMARKS` | `OFF` | Build benchmarks |
+| `MERVE_USE_SIMDUTF` | `OFF` | Use simdutf for optimized string operations |
+| `MERVE_SANITIZE` | `OFF` | Enable address sanitizer |
 
 ### Building with simdutf
 
 To enable SIMD-accelerated string operations:
 
 ```bash
-cmake -B build -DLEXER_USE_SIMDUTF=ON
+cmake -B build -DMERVE_USE_SIMDUTF=ON
 cmake --build build
 ```
 
-When `LEXER_USE_SIMDUTF=ON`, CMake will automatically fetch simdutf via CPM if it's not found on the system. The library uses simdutf's optimized `find()` function for faster escape sequence detection.
+When `MERVE_USE_SIMDUTF=ON`, CMake will automatically fetch simdutf via CPM if it's not found on the system. The library uses simdutf's optimized `find()` function for faster escape sequence detection.
 
-For projects that already have simdutf available (like Node.js), define `LEXER_USE_SIMDUTF=1` and ensure the simdutf header is in the include path.
+For projects that already have simdutf available (like Node.js), define `MERVE_USE_SIMDUTF=1` and ensure the simdutf header is in the include path.
 
 ## Performance
 

@@ -1,18 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(lexer
+project(merve
   DESCRIPTION "Fast lexer to extract named exports via analysis from CommonJS modules"
   LANGUAGES C CXX
   VERSION 1.0.0
 )
 
-set(LEXER_LIB_VERSION "1.0.0" CACHE STRING "lexer library version")
-set(LEXER_LIB_SOVERSION "1" CACHE STRING "lexer library soversion")
+set(MERVE_LIB_VERSION "1.0.0" CACHE STRING "lexer library version")
+set(MERVE_LIB_SOVERSION "1" CACHE STRING "lexer library soversion")
 
 include(GNUInstallDirs)
 
 # Optional simdutf support for optimized string operations
-if(LEXER_USE_SIMDUTF)
+if(MERVE_USE_SIMDUTF)
   # Try to find simdutf system package first
   find_package(simdutf QUIET)
   if(NOT simdutf_FOUND)
@@ -32,27 +32,27 @@ if(LEXER_USE_SIMDUTF)
     message(STATUS "simdutf enabled for optimized string operations")
   else()
     message(WARNING "simdutf requested but not found, building without it")
-    set(LEXER_USE_SIMDUTF OFF)
+    set(MERVE_USE_SIMDUTF OFF)
   endif()
 endif()
 
 include(CTest)
 include(cmake/lexer-flags.cmake)
 
-set(LEXER_SOURCE_DIR src)
+set(MERVE_SOURCE_DIR src)
 
 add_subdirectory(src)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cmake)
 
-option(LEXER_BENCHMARKS "Build benchmarks" OFF)
-option(LEXER_TESTING "Build tests" ${BUILD_TESTING})
+option(MERVE_BENCHMARKS "Build benchmarks" OFF)
+option(MERVE_TESTING "Build tests" ${BUILD_TESTING})
 
 # There are cases where when embedding lexer as a dependency for other CMake
 # projects as submodules or subdirectories (via FetchContent) can lead to
 # errors due to CPM, so this is here to support disabling all the testing
 # for lexer if one only wishes to use the lexer library.
-if(LEXER_TESTING OR LEXER_BENCHMARKS)
+if(MERVE_TESTING OR MERVE_BENCHMARKS)
   # Try to find GTest system package first
   find_package(GTest QUIET)
   if(NOT GTest_FOUND)
@@ -60,7 +60,7 @@ if(LEXER_TESTING OR LEXER_BENCHMARKS)
     # CPM requires git as an implicit dependency
     find_package(Git QUIET)
     # We use googletest in the tests
-    if(Git_FOUND AND LEXER_TESTING)
+    if(Git_FOUND AND MERVE_TESTING)
       CPMAddPackage(
         NAME GTest
         GITHUB_REPOSITORY google/googletest
@@ -70,7 +70,7 @@ if(LEXER_TESTING OR LEXER_BENCHMARKS)
     endif()
   endif()
   # We use Google Benchmark, but it does not build under several 32-bit systems.
-  if(Git_FOUND AND LEXER_BENCHMARKS AND (CMAKE_SIZEOF_VOID_P EQUAL 8))
+  if(Git_FOUND AND MERVE_BENCHMARKS AND (CMAKE_SIZEOF_VOID_P EQUAL 8))
     CPMAddPackage(
       NAME benchmark
       GITHUB_REPOSITORY google/benchmark
@@ -82,7 +82,7 @@ if(LEXER_TESTING OR LEXER_BENCHMARKS)
     )
   endif()
 
-  if (LEXER_TESTING AND NOT EMSCRIPTEN)
+  if (MERVE_TESTING AND NOT EMSCRIPTEN)
     if(Git_FOUND)
       message(STATUS "The tests are enabled.")
       add_subdirectory(tests)
@@ -93,102 +93,102 @@ if(LEXER_TESTING OR LEXER_BENCHMARKS)
     if(is_top_project)
       message(STATUS "The tests are disabled.")
     endif()
-  endif(LEXER_TESTING AND NOT EMSCRIPTEN)
+  endif(MERVE_TESTING AND NOT EMSCRIPTEN)
 
-  If(LEXER_BENCHMARKS AND NOT EMSCRIPTEN)
+  If(MERVE_BENCHMARKS AND NOT EMSCRIPTEN)
     if(Git_FOUND)
       message(STATUS "Lexer benchmarks enabled.")
       add_subdirectory(benchmarks)
     else()
       message(STATUS "The benchmarks are disabled because git was not found.")
     endif()
-  else(LEXER_BENCHMARKS AND NOT EMSCRIPTEN)
+  else(MERVE_BENCHMARKS AND NOT EMSCRIPTEN)
     if(is_top_project)
-      message(STATUS "Lexer benchmarks disabled. Set LEXER_BENCHMARKS=ON to enable them.")
+      message(STATUS "Lexer benchmarks disabled. Set MERVE_BENCHMARKS=ON to enable them.")
     endif()
-  endif(LEXER_BENCHMARKS AND NOT EMSCRIPTEN)
+  endif(MERVE_BENCHMARKS AND NOT EMSCRIPTEN)
 
-  if (LEXER_TESTING AND EMSCRIPTEN)
+  if (MERVE_TESTING AND EMSCRIPTEN)
     add_subdirectory(tests/wasm)
-  endif(LEXER_TESTING AND EMSCRIPTEN)
+  endif(MERVE_TESTING AND EMSCRIPTEN)
 endif()
 
 
-add_library(lexer::lexer ALIAS lexer)
+add_library(merve::merve ALIAS merve)
 
 set_target_properties(
-  lexer PROPERTIES
-  VERSION "${LEXER_LIB_VERSION}"
-  SOVERSION "${LEXER_LIB_SOVERSION}"
+  merve PROPERTIES
+  VERSION "${MERVE_LIB_VERSION}"
+  SOVERSION "${MERVE_LIB_SOVERSION}"
   WINDOWS_EXPORT_ALL_SYMBOLS YES
 )
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-if(NOT LEXER_COVERAGE AND NOT EMSCRIPTEN)
+if(NOT MERVE_COVERAGE AND NOT EMSCRIPTEN)
   add_subdirectory(singleheader)
 endif()
 
 install(
   FILES include/lexer.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-  COMPONENT lexer_development
+  COMPONENT merve_development
 )
 
 install(
   DIRECTORY include/lexer
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-  COMPONENT lexer_development
+  COMPONENT merve_development
 )
 
 install(
-  TARGETS lexer
-  EXPORT lexer_targets
-  RUNTIME COMPONENT lexer_runtime
-  LIBRARY COMPONENT lexer_runtime
-  NAMELINK_COMPONENT lexer_development
-  ARCHIVE COMPONENT lexer_development
+  TARGETS merve
+  EXPORT merve_targets
+  RUNTIME COMPONENT merve_runtime
+  LIBRARY COMPONENT merve_runtime
+  NAMELINK_COMPONENT merve_development
+  ARCHIVE COMPONENT merve_development
   INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
-configure_file(cmake/lexer-config.cmake.in lexer-config.cmake @ONLY)
+configure_file(cmake/merve-config.cmake.in merve-config.cmake @ONLY)
 
 write_basic_package_version_file(
-  lexer-config-version.cmake
+  merve-config-version.cmake
   COMPATIBILITY SameMinorVersion
 )
 
 set(
-  LEXER_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/lexer"
+  MERVE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/merve"
   CACHE STRING "CMake package config location relative to the install prefix"
 )
-mark_as_advanced(LEXER_INSTALL_CMAKEDIR)
+mark_as_advanced(MERVE_INSTALL_CMAKEDIR)
 
 install(
   FILES
-  "${PROJECT_BINARY_DIR}/lexer-config.cmake"
-  "${PROJECT_BINARY_DIR}/lexer-config-version.cmake"
-  DESTINATION "${LEXER_INSTALL_CMAKEDIR}"
-  COMPONENT lexer_development
+  "${PROJECT_BINARY_DIR}/merve-config.cmake"
+  "${PROJECT_BINARY_DIR}/merve-config-version.cmake"
+  DESTINATION "${MERVE_INSTALL_CMAKEDIR}"
+  COMPONENT merve_development
 )
 
 install(
-  EXPORT lexer_targets
-  NAMESPACE lexer::
-  DESTINATION "${LEXER_INSTALL_CMAKEDIR}"
-  COMPONENT lexer_development
+  EXPORT merve_targets
+  NAMESPACE merve::
+  DESTINATION "${MERVE_INSTALL_CMAKEDIR}"
+  COMPONENT merve_development
 )
 
 install(
-  EXPORT lexer_targets
-  NAMESPACE lexer::
-  DESTINATION "${LEXER_INSTALL_CMAKEDIR}"
+  EXPORT merve_targets
+  NAMESPACE merve::
+  DESTINATION "${MERVE_INSTALL_CMAKEDIR}"
   COMPONENT example_development
 )
 
 if(is_top_project)
-  set(CPACK_PACKAGE_VENDOR "Lexer Authors")
+  set(CPACK_PACKAGE_VENDOR "Merve Authors")
   set(CPACK_PACKAGE_CONTACT "yagiz@nizipli.com")
   set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE-MIT")
   set(CPACK_RPM_PACKAGE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE-MIT")
