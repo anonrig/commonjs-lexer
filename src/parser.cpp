@@ -7,6 +7,287 @@
 
 namespace lexer {
 
+// ============================================================================
+// Compile-time lookup tables for character classification
+// ============================================================================
+
+// Hex digit lookup table: maps char -> hex value (0-15), or 255 if invalid
+static constexpr std::array<uint8_t, 256> kHexTable = []() consteval {
+  std::array<uint8_t, 256> table{};
+  for (int i = 0; i < 256; ++i) table[i] = 255;
+  for (int i = '0'; i <= '9'; ++i) table[i] = static_cast<uint8_t>(i - '0');
+  for (int i = 'a'; i <= 'f'; ++i) table[i] = static_cast<uint8_t>(i - 'a' + 10);
+  for (int i = 'A'; i <= 'F'; ++i) table[i] = static_cast<uint8_t>(i - 'A' + 10);
+  return table;
+}();
+
+// Simple escape lookup table: maps escape char -> result char
+// Uses 0xFF as "not a simple escape" marker since '\0' is a valid escape result
+static constexpr std::array<uint8_t, 256> kSimpleEscapeTable = []() consteval {
+  std::array<uint8_t, 256> table{};
+  for (int i = 0; i < 256; ++i) table[i] = 0xFF;
+  table['n'] = '\n';
+  table['r'] = '\r';
+  table['t'] = '\t';
+  table['b'] = '\b';
+  table['f'] = '\f';
+  table['v'] = '\v';
+  table['0'] = '\0';
+  table['\\'] = '\\';
+  table['\''] = '\'';
+  table['"'] = '"';
+  return table;
+}();
+
+// Punctuator lookup table
+static constexpr std::array<bool, 256> kPunctuatorTable = []() consteval {
+  std::array<bool, 256> table{};
+  table['!'] = true;
+  table['%'] = true;
+  table['&'] = true;
+  // ch > 39 && ch < 48: '(' ')' '*' '+' ',' '-' '.' '/'
+  for (int i = 40; i < 48; ++i) table[i] = true;
+  // ch > 57 && ch < 64: ':' ';' '<' '=' '>' '?'
+  for (int i = 58; i < 64; ++i) table[i] = true;
+  table['['] = true;
+  table[']'] = true;
+  table['^'] = true;
+  // ch > 122 && ch < 127: '{' '|' '}' '~'
+  for (int i = 123; i < 127; ++i) table[i] = true;
+  return table;
+}();
+
+// Expression punctuator lookup table (similar but excludes ')' and '}')
+static constexpr std::array<bool, 256> kExpressionPunctuatorTable = []() consteval {
+  std::array<bool, 256> table{};
+  table['!'] = true;
+  table['%'] = true;
+  table['&'] = true;
+  // ch > 39 && ch < 47 && ch != 41: '(' '*' '+' ',' '-' '.'
+  for (int i = 40; i < 47; ++i) {
+    if (i != 41) table[i] = true;  // Skip ')'
+  }
+  // ch > 57 && ch < 64: ':' ';' '<' '=' '>' '?'
+  for (int i = 58; i < 64; ++i) table[i] = true;
+  table['['] = true;
+  table['^'] = true;
+  // ch > 122 && ch < 127 && ch != '}': '{' '|' '~'
+  for (int i = 123; i < 127; ++i) {
+    if (i != 125) table[i] = true;  // Skip '}'
+  }
+  return table;
+}();
+
+// Identifier start lookup table (a-z, A-Z, _, $, >= 0x80)
+static constexpr std::array<bool, 256> kIdentifierStartTable = []() consteval {
+  std::array<bool, 256> table{};
+  for (int i = 'a'; i <= 'z'; ++i) table[i] = true;
+  for (int i = 'A'; i <= 'Z'; ++i) table[i] = true;
+  table['_'] = true;
+  table['$'] = true;
+  // UTF-8 continuation bytes and lead bytes (>= 0x80)
+  for (int i = 0x80; i < 256; ++i) table[i] = true;
+  return table;
+}();
+
+// Identifier char lookup table (identifier start + digits)
+static constexpr std::array<bool, 256> kIdentifierCharTable = []() consteval {
+  std::array<bool, 256> table{};
+  for (int i = 'a'; i <= 'z'; ++i) table[i] = true;
+  for (int i = 'A'; i <= 'Z'; ++i) table[i] = true;
+  table['_'] = true;
+  table['$'] = true;
+  for (int i = 0x80; i < 256; ++i) table[i] = true;
+  for (int i = '0'; i <= '9'; ++i) table[i] = true;
+  return table;
+}();
+
+// Whitespace/line break lookup table
+static constexpr std::array<bool, 256> kBrOrWsTable = []() consteval {
+  std::array<bool, 256> table{};
+  // c > 8 && c < 14: \t \n \v \f \r
+  for (int i = 9; i < 14; ++i) table[i] = true;
+  table[32] = true;  // space
+  return table;
+}();
+
+// ============================================================================
+// Inline functions using lookup tables
+// ============================================================================
+
+// Parse a hex digit, returns -1 if invalid
+inline int hexDigit(unsigned char c) {
+  uint8_t val = kHexTable[c];
+  return val == 255 ? -1 : static_cast<int>(val);
+}
+
+// Encode a Unicode code point as UTF-8 into the output string
+inline void encodeUtf8(std::string& out, uint32_t codepoint) {
+  if (codepoint <= 0x7F) {
+    out.push_back(static_cast<char>(codepoint));
+  } else if (codepoint <= 0x7FF) {
+    out.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
+    out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+  } else if (codepoint <= 0xFFFF) {
+    out.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
+    out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+    out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+  } else if (codepoint <= 0x10FFFF) {
+    out.push_back(static_cast<char>(0xF0 | (codepoint >> 18)));
+    out.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+    out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+    out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+  }
+}
+
+// Check if codepoint is a surrogate (invalid standalone Unicode)
+inline bool isSurrogate(uint32_t codepoint) {
+  return codepoint >= 0xD800 && codepoint <= 0xDFFF;
+}
+
+// Unescape JavaScript string escape sequences
+// Returns empty optional on invalid escape sequences (like lone surrogates)
+std::optional<std::string> unescapeJsString(std::string_view str) {
+  std::string result;
+  result.reserve(str.size());
+
+  for (size_t i = 0; i < str.size(); ++i) {
+    if (str[i] != '\\') {
+      result.push_back(str[i]);
+      continue;
+    }
+
+    if (++i >= str.size()) {
+      return std::nullopt;  // Trailing backslash
+    }
+
+    // Check simple escape table first (single character escapes)
+    uint8_t simple = kSimpleEscapeTable[static_cast<unsigned char>(str[i])];
+    if (simple != 0xFF) {
+      result.push_back(static_cast<char>(simple));
+      continue;
+    }
+
+    // Handle complex escapes
+    switch (str[i]) {
+      case 'x': {
+        // \xHH - two hex digits
+        if (i + 2 >= str.size()) return std::nullopt;
+        int h1 = hexDigit(static_cast<unsigned char>(str[i + 1]));
+        int h2 = hexDigit(static_cast<unsigned char>(str[i + 2]));
+        if (h1 < 0 || h2 < 0) return std::nullopt;
+        result.push_back(static_cast<char>((h1 << 4) | h2));
+        i += 2;
+        break;
+      }
+      case 'u': {
+        if (i + 1 >= str.size()) return std::nullopt;
+        if (str[i + 1] == '{') {
+          // \u{XXXX} - variable length hex
+          size_t start = i + 2;
+          size_t end_brace = str.find('}', start);
+          if (end_brace == std::string_view::npos || end_brace == start) return std::nullopt;
+          uint32_t codepoint = 0;
+          for (size_t j = start; j < end_brace; ++j) {
+            int digit = hexDigit(static_cast<unsigned char>(str[j]));
+            if (digit < 0) return std::nullopt;
+            codepoint = (codepoint << 4) | static_cast<uint32_t>(digit);
+            if (codepoint > 0x10FFFF) return std::nullopt;  // Invalid codepoint
+          }
+          // Handle surrogate pairs in \u{XXXX} format
+          if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+            // High surrogate - check for low surrogate \u{XXXX}
+            if (end_brace + 3 < str.size() && str[end_brace + 1] == '\\' && 
+                str[end_brace + 2] == 'u' && str[end_brace + 3] == '{') {
+              size_t low_start = end_brace + 4;
+              size_t low_end = str.find('}', low_start);
+              if (low_end != std::string_view::npos && low_end > low_start) {
+                uint32_t low = 0;
+                bool valid_low = true;
+                for (size_t j = low_start; j < low_end; ++j) {
+                  int digit = hexDigit(static_cast<unsigned char>(str[j]));
+                  if (digit < 0) {
+                    valid_low = false;
+                    break;
+                  }
+                  low = (low << 4) | static_cast<uint32_t>(digit);
+                }
+                if (valid_low && low >= 0xDC00 && low <= 0xDFFF) {
+                  // Valid surrogate pair - combine into single codepoint
+                  codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
+                  end_brace = low_end;  // Skip past the low surrogate
+                } else {
+                  // Lone high surrogate
+                  return std::nullopt;
+                }
+              } else {
+                // Lone high surrogate
+                return std::nullopt;
+              }
+            } else {
+              // Lone high surrogate
+              return std::nullopt;
+            }
+          } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+            // Lone low surrogate
+            return std::nullopt;
+          }
+          encodeUtf8(result, codepoint);
+          i = end_brace;
+        } else {
+          // \uHHHH - exactly four hex digits
+          if (i + 4 >= str.size()) return std::nullopt;
+          uint32_t codepoint = 0;
+          for (int j = 1; j <= 4; ++j) {
+            int digit = hexDigit(static_cast<unsigned char>(str[i + static_cast<size_t>(j)]));
+            if (digit < 0) return std::nullopt;
+            codepoint = (codepoint << 4) | static_cast<uint32_t>(digit);
+          }
+          // Handle surrogate pairs
+          if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+            // High surrogate - check for low surrogate
+            if (i + 10 < str.size() && str[i + 5] == '\\' && str[i + 6] == 'u') {
+              uint32_t low = 0;
+              bool valid_low = true;
+              for (int j = 7; j <= 10; ++j) {
+                int digit = hexDigit(static_cast<unsigned char>(str[i + static_cast<size_t>(j)]));
+                if (digit < 0) {
+                  valid_low = false;
+                  break;
+                }
+                low = (low << 4) | static_cast<uint32_t>(digit);
+              }
+              if (valid_low && low >= 0xDC00 && low <= 0xDFFF) {
+                // Valid surrogate pair - combine into single codepoint
+                codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
+                i += 6;  // Skip the low surrogate
+              } else {
+                // Lone high surrogate
+                return std::nullopt;
+              }
+            } else {
+              // Lone high surrogate
+              return std::nullopt;
+            }
+          } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+            // Lone low surrogate
+            return std::nullopt;
+          }
+          encodeUtf8(result, codepoint);
+          i += 4;
+        }
+        break;
+      }
+      default:
+        // Unknown escape - just include the character as-is
+        result.push_back(str[i]);
+        break;
+    }
+  }
+
+  return result;
+}
+
 // Stack depth limits
 constexpr size_t STACK_DEPTH = 2048;
 constexpr size_t MAX_STAR_EXPORTS = 256;
@@ -49,33 +330,28 @@ private:
   StarExportBinding* starExportStack;
   const StarExportBinding* STAR_EXPORT_STACK_END;
 
-  std::vector<std::string_view>& exports;
-  std::vector<std::string_view>& re_exports;
+  std::vector<export_string>& exports;
+  std::vector<export_string>& re_exports;
 
-  // Character classification helpers
-  static constexpr bool isBr(char c) {
+  // Character classification helpers using lookup tables
+  static bool isBr(char c) {
     return c == '\r' || c == '\n';
   }
 
-  static constexpr bool isBrOrWs(char c) {
-    return (c > 8 && c < 14) || c == 32 || c == '\t';
+  static bool isBrOrWs(unsigned char c) {
+    return kBrOrWsTable[c];
   }
 
-  static constexpr bool isBrOrWsOrPunctuatorNotDot(char c) {
-    return isBrOrWs(c) || (isPunctuator(c) && c != '.');
+  static bool isBrOrWsOrPunctuatorNotDot(unsigned char c) {
+    return kBrOrWsTable[c] || (kPunctuatorTable[c] && c != '.');
   }
 
-  static constexpr bool isPunctuator(char ch) {
-    return ch == '!' || ch == '%' || ch == '&' ||
-           (ch > 39 && ch < 48) || (ch > 57 && ch < 64) ||
-           ch == '[' || ch == ']' || ch == '^' ||
-           (ch > 122 && ch < 127);
+  static bool isPunctuator(unsigned char ch) {
+    return kPunctuatorTable[ch];
   }
 
-  static constexpr bool isExpressionPunctuator(char ch) {
-    return ch == '!' || ch == '%' || ch == '&' ||
-           (ch > 39 && ch < 47 && ch != 41) || (ch > 57 && ch < 64) ||
-           ch == '[' || ch == '^' || (ch > 122 && ch < 127 && ch != '}');
+  static bool isExpressionPunctuator(unsigned char ch) {
+    return kExpressionPunctuatorTable[ch];
   }
 
   // String comparison helpers using string_view for cleaner, more maintainable code
@@ -88,14 +364,13 @@ private:
     return true;
   }
 
-  // Character type detection - simplified for ASCII/UTF-8
-  static constexpr bool isIdentifierStart(uint8_t ch) {
-    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' || ch == '$' || ch >= 0x80;
+  // Character type detection using lookup tables
+  static bool isIdentifierStart(uint8_t ch) {
+    return kIdentifierStartTable[ch];
   }
 
-  static constexpr bool isIdentifierChar(uint8_t ch) {
-    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
-           (ch >= '0' && ch <= '9') || ch == '_' || ch == '$' || ch >= 0x80;
+  static bool isIdentifierChar(uint8_t ch) {
+    return kIdentifierCharTable[ch];
   }
 
   constexpr bool keywordStart(const char* p) const {
@@ -321,6 +596,11 @@ private:
     return true;
   }
 
+  // Check if string contains escape sequences
+  static bool needsUnescaping(std::string_view str) {
+    return str.find('\\') != std::string_view::npos;
+  }
+
   void addExport(std::string_view export_name) {
     // Skip surrounding quotes if present
     if (!export_name.empty() && (export_name.front() == '\'' || export_name.front() == '"')) {
@@ -328,28 +608,34 @@ private:
       export_name.remove_suffix(1);
     }
 
-    // Skip exports that are incomplete Unicode escape sequences
-    // A single \u{XXXX} is 8 chars: \u{D83C}
-    // Complete emoji like \u{D83C}\u{DF10} is 16 chars
-    // Filter out single surrogate halves which are invalid on their own
-    if (export_name.size() == 8 &&
-        export_name[0] == '\\' && export_name[1] == 'u' && export_name[2] == '{' &&
-        export_name[7] == '}') {
-      // Check if it's in surrogate pair range (D800-DFFF)
-      if (export_name[3] == 'D' &&
-          ((export_name[4] >= '8' && export_name[4] <= '9') ||
-           (export_name[4] >= 'A' && export_name[4] <= 'F'))) {
-        return; // Skip incomplete surrogate pairs
+    // Fast path: no escaping needed, use string_view directly
+    if (!needsUnescaping(export_name)) {
+      // Check if this export already exists (avoid duplicates)
+      for (const auto& existing : exports) {
+        if (get_string_view(existing) == export_name) {
+          return; // Already exists, skip
+        }
       }
+      exports.push_back(export_name);
+      return;
     }
+
+    // Slow path: unescape the export name (handles \u{XXXX}, \uHHHH, etc.)
+    // Returns nullopt for invalid sequences like lone surrogates
+    auto unescaped = unescapeJsString(export_name);
+    if (!unescaped.has_value()) {
+      return;  // Skip invalid escape sequences
+    }
+
+    const std::string& name = unescaped.value();
 
     // Check if this export already exists (avoid duplicates)
     for (const auto& existing : exports) {
-      if (existing == export_name) {
+      if (get_string_view(existing) == name) {
         return; // Already exists, skip
       }
     }
-    exports.push_back(export_name);
+    exports.push_back(std::move(unescaped.value()));
   }
 
   void addReexport(std::string_view reexport_name) {
@@ -358,7 +644,20 @@ private:
       reexport_name.remove_prefix(1);
       reexport_name.remove_suffix(1);
     }
-    re_exports.push_back(reexport_name);
+
+    // Fast path: no escaping needed, use string_view directly
+    if (!needsUnescaping(reexport_name)) {
+      re_exports.push_back(reexport_name);
+      return;
+    }
+
+    // Slow path: unescape the reexport name
+    auto unescaped = unescapeJsString(reexport_name);
+    if (!unescaped.has_value()) {
+      return;  // Skip invalid escape sequences
+    }
+
+    re_exports.push_back(std::move(unescaped.value()));
   }
 
   bool readExportsOrModuleDotExports(char ch) {
@@ -1194,7 +1493,7 @@ private:
   }
 
 public:
-  CJSLexer(std::vector<std::string_view>& out_exports, std::vector<std::string_view>& out_re_exports)
+  CJSLexer(std::vector<export_string>& out_exports, std::vector<export_string>& out_re_exports)
     : source(nullptr), pos(nullptr), end(nullptr), lastTokenPos(nullptr),
       templateStackDepth(0), openTokenDepth(0), templateDepth(0),
       lastSlashWasDivision(false), nextBraceIsClass(false),
