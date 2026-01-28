@@ -165,6 +165,17 @@ set(
 )
 mark_as_advanced(MERVE_INSTALL_CMAKEDIR)
 
+configure_file(
+  "${PROJECT_SOURCE_DIR}/merve.pc.in"
+  "${PROJECT_BINARY_DIR}/merve.pc"
+  @ONLY
+)
+install(
+  FILES "${PROJECT_BINARY_DIR}/merve.pc"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+  COMPONENT nbytes_development
+)
+
 install(
   FILES
   "${PROJECT_BINARY_DIR}/merve-config.cmake"
