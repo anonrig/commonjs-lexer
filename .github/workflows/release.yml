@@ -1,53 +1,38 @@
-name: Release Create
+name: Release Please
 
 on:
-  pull_request:
-    types: [closed]
+  push:
+    branches:
+      - main
 
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+permissions:
+  contents: read
 
 jobs:
-  check-release-conditions:
+  release-please:
     runs-on: ubuntu-latest
-    if: |
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'main' &&
-      startsWith(github.event.pull_request.head.ref, 'release/v') &&
-      startsWith(github.event.pull_request.user.login, 'github-actions')
-
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created:  ${{ steps.release.outputs.release_created }}
+      release_tag:  ${{ steps.release.outputs.tag_name }}
     steps:
-      - name: Check release conditions
-        run: |
-          echo "All conditions have been met!"
+      - uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38  # v4.4.0
+        id: release
 
   create-release:
     permissions:
       contents: write
-    needs: check-release-conditions
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
 
-    env:
-      NEXT_RELEASE_TAG: ${{ github.event.pull_request.head.ref }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Prepare Python
-        uses: actions/setup-python@v5
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: pip install -r ./tools/release/requirements.txt
-
-      - name: Extract Tag from branch name
-        run: |
-          NEXT_RELEASE_TAG=$(echo $NEXT_RELEASE_TAG | sed 's/^release\///')
-          echo "NEXT_RELEASE_TAG=${NEXT_RELEASE_TAG}" >> $GITHUB_ENV
-
-      - name: Target release Tag
-        run: echo "New tag $NEXT_RELEASE_TAG"
+          persist-credentials: false
 
       - name: Setup Ninja
         run: sudo apt-get install ninja-build
@@ -65,4 +50,7 @@ jobs:
           cp merve.h merve.cpp ../../singleheader/
 
       - name: Create release
-        run: ./tools/release/create_release.py
+        run: gh release upload "$RELEASE_TAG" singleheader/*
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.release_tag }}
