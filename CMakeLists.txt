@@ -131,13 +131,13 @@ if(NOT MERVE_COVERAGE AND NOT EMSCRIPTEN)
 endif()
 
 install(
-  FILES include/lexer.h
+  FILES include/merve.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
   COMPONENT merve_development
 )
 
 install(
-  DIRECTORY include/lexer
+  DIRECTORY include/merve
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
   COMPONENT merve_development
 )
