@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+
+Name: merve
+Description: Lexer to extract named exports via analysis from CommonJS modules
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lmerve
+Cflags: -I${includedir}
