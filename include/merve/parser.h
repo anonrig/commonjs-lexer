@@ -1,7 +1,7 @@
 #ifndef MERVE_PARSER_H
 #define MERVE_PARSER_H
 
-#include "lexer/version.h"
+#include "merve/version.h"
 
 #include <optional>
 #include <string>
