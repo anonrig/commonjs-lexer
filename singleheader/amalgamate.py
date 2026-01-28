@@ -37,7 +37,7 @@ else:
 ALLCFILES = ["parser.cpp"]
 
 # order matters
-ALLCHEADERS = ["lexer.h"]
+ALLCHEADERS = ["merve.h"]
 
 # Output file names
 OUTPUT_H = "merve.h"
@@ -82,7 +82,7 @@ def dofile(fid: str, prepath: str, filename: str) -> None:
             s = includepattern.search(line)
             if s:
                 includedfile = s.group(1)
-                if includedfile == "lexer.h" and filename == "lexer.cpp":
+                if includedfile == "merve.h" and filename == "merve.cpp":
                     print(line, file=fid)
                     continue
 

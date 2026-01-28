@@ -15,8 +15,8 @@ docs/theme
 # Generated using only the Github workflow
 benchmark_result.json
 
-singleheader/lexer.h
-singleheader/lexer.cpp
+singleheader/merve.h
+singleheader/merve.cpp
 
 #ignore VScode
 .vscode/
