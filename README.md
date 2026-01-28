@@ -34,7 +34,7 @@ Copy `singleheader/merve.h` and `singleheader/merve.cpp` to your project.
 ## Usage
 
 ```cpp
-#include "lexer.h"
+#include "merve.h"
 #include <iostream>
 
 int main() {
