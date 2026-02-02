@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.16)
 project(merve
   DESCRIPTION "Fast lexer to extract named exports via analysis from CommonJS modules"
   LANGUAGES C CXX
-  VERSION 1.0.0 # x-release-please-version
+  VERSION 1.1.0 # x-release-please-version
 )
 
-set(MERVE_LIB_VERSION "1.0.0" CACHE STRING "lexer library version") # x-release-please-version
+set(MERVE_LIB_VERSION "1.1.0" CACHE STRING "lexer library version") # x-release-please-version
 set(MERVE_LIB_SOVERSION "1" CACHE STRING "lexer library soversion") # x-release-please-major
 
 include(GNUInstallDirs)
