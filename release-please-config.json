@@ -4,7 +4,7 @@
       "release-type": "simple",
       "extra-files": [
         "CMakeLists.txt",
-        "include/lexer/version.h"
+        "include/merve/version.h"
       ]
     }
   }
