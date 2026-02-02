@@ -13,7 +13,7 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - name: Compute number of commits in the PR
+      - name: Compute number of commits to fetch
         id: nb-of-commits
         # `+ 1` for PRs because of the merge commit
         run: |
