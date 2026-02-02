@@ -1,0 +1,29 @@
+name: Conventional Commit Linter
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute number of commits in the PR
+        id: nb-of-commits
+        # `+ 1` for PRs because of the merge commit
+        run: |
+          echo "toParse=$(echo "$EVENT" | jq -r 'if .commits then (.commits | length) else (.pull_request.commits + 1) end')" >> $GITHUB_OUTPUT
+        env:
+          EVENT: ${{ toJSON(github.event) }}
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .
+          fetch-depth: ${{ steps.nb-of-commits.outputs.toParse }}
+      - uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed  # v6.2.1
