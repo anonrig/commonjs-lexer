@@ -6,6 +6,7 @@ A fast C++ lexer for extracting named exports from CommonJS modules. This librar
 
 - **Fast**: Zero-copy parsing for most exports using `std::string_view`
 - **Accurate**: Handles complex CommonJS patterns including re-exports, Object.defineProperty, and transpiler output
+- **Source Locations**: Each export includes a 1-based line number for tooling integration
 - **Unicode Support**: Properly unescapes JavaScript string literals including `\u{XXXX}` and surrogate pairs
 - **Optional SIMD Acceleration**: Can use [simdutf](https://github.com/simdutf/simdutf) for faster string operations
 - **No Dependencies**: Single-header distribution available (simdutf is optional)
@@ -49,10 +50,11 @@ int main() {
   if (result) {
     std::cout << "Exports found:" << std::endl;
     for (const auto& exp : result->exports) {
-      std::cout << "  - " << lexer::get_string_view(exp) << std::endl;
+      std::cout << "  - " << lexer::get_string_view(exp)
+                << " (line " << exp.line << ")" << std::endl;
     }
   }
-  
+
   return 0;
 }
 ```
@@ -60,9 +62,9 @@ int main() {
 Output:
 ```
 Exports found:
-  - foo
-  - bar
-  - baz
+  - foo (line 2)
+  - bar (line 3)
+  - baz (line 4)
 ```
 
 ## API Reference
@@ -85,10 +87,21 @@ Parses CommonJS source code and extracts export information.
 
 ```cpp
 struct lexer_analysis {
-  std::vector<export_string> exports;      // Named exports
-  std::vector<export_string> re_exports;   // Re-exported module specifiers
+  std::vector<export_entry> exports;      // Named exports
+  std::vector<export_entry> re_exports;   // Re-exported module specifiers
 };
 ```
+
+### `lexer::export_entry`
+
+```cpp
+struct export_entry {
+  export_string name;
+  uint32_t line;  // 1-based line number
+};
+```
+
+Each export/re-export entry includes the name and the 1-based line number where it was found in the source.
 
 ### `lexer::export_string`
 
@@ -104,9 +117,10 @@ Export names are stored as a variant to avoid unnecessary copies:
 
 ```cpp
 inline std::string_view get_string_view(const export_string& s);
+inline std::string_view get_string_view(const export_entry& e);
 ```
 
-Helper function to get a `string_view` from either variant type.
+Helper functions to get a `string_view` from an `export_string` or `export_entry`.
 
 ### `lexer::get_last_error`
 

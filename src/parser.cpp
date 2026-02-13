@@ -325,6 +325,8 @@ private:
   uint16_t openTokenDepth;
   uint16_t templateDepth;
 
+  uint32_t line_;
+
   bool lastSlashWasDivision;
   bool nextBraceIsClass;
 
@@ -335,8 +337,13 @@ private:
   StarExportBinding* starExportStack;
   const StarExportBinding* STAR_EXPORT_STACK_END;
 
-  std::vector<export_string>& exports;
-  std::vector<export_string>& re_exports;
+  std::vector<export_entry>& exports;
+  std::vector<export_entry>& re_exports;
+
+  void countNewline(char ch) {
+    if (ch == '\n') ++line_;
+    else if (ch == '\r' && (pos + 1 >= end || *(pos + 1) != '\n')) ++line_;
+  }
 
   // Character classification helpers using lookup tables
   static bool isBr(char c) {
@@ -495,6 +502,8 @@ private:
           return ch;
       } else if (!isBrOrWs(ch)) {
         return ch;
+      } else {
+        countNewline(ch);
       }
     } while (pos++ < end);
     return ch;
@@ -503,8 +512,10 @@ private:
   void lineComment() {
     while (pos++ < end) {
       char ch = *pos;
-      if (ch == '\n' || ch == '\r')
+      if (ch == '\n' || ch == '\r') {
+        countNewline(ch);
         return;
+      }
     }
   }
 
@@ -516,6 +527,7 @@ private:
         pos++;
         return;
       }
+      countNewline(ch);
     }
   }
 
@@ -527,8 +539,13 @@ private:
       if (ch == '\\') {
         if (pos + 1 >= end) break;
         ch = *++pos;
-        if (ch == '\r' && *(pos + 1) == '\n')
-          pos++;
+        if (ch == '\r') {
+          ++line_;
+          if (*(pos + 1) == '\n')
+            pos++;
+        } else if (ch == '\n') {
+          ++line_;
+        }
       } else if (isBr(ch))
         break;
     }
@@ -580,8 +597,12 @@ private:
       }
       if (ch == '`')
         return;
-      if (ch == '\\' && pos + 1 < end)
+      if (ch == '\\' && pos + 1 < end) {
         pos++;
+        countNewline(*pos);
+      } else {
+        countNewline(ch);
+      }
     }
     syntaxError(lexer_error::UNTERMINATED_TEMPLATE_STRING);
   }
@@ -614,7 +635,7 @@ private:
 #endif
   }
 
-  void addExport(std::string_view export_name) {
+  void addExport(std::string_view export_name, uint32_t at_line) {
     // Skip surrounding quotes if present
     if (!export_name.empty() && (export_name.front() == '\'' || export_name.front() == '"')) {
       export_name.remove_prefix(1);
@@ -625,11 +646,11 @@ private:
     if (!needsUnescaping(export_name)) {
       // Check if this export already exists (avoid duplicates)
       for (const auto& existing : exports) {
-        if (get_string_view(existing) == export_name) {
+        if (get_string_view(existing.name) == export_name) {
           return; // Already exists, skip
         }
       }
-      exports.push_back(export_name);
+      exports.push_back(export_entry{export_name, at_line});
       return;
     }
 
@@ -644,14 +665,14 @@ private:
 
     // Check if this export already exists (avoid duplicates)
     for (const auto& existing : exports) {
-      if (get_string_view(existing) == name) {
+      if (get_string_view(existing.name) == name) {
         return; // Already exists, skip
       }
     }
-    exports.push_back(std::move(unescaped.value()));
+    exports.push_back(export_entry{std::move(unescaped.value()), at_line});
   }
 
-  void addReexport(std::string_view reexport_name) {
+  void addReexport(std::string_view reexport_name, uint32_t at_line) {
     // Skip surrounding quotes if present
     if (!reexport_name.empty() && (reexport_name.front() == '\'' || reexport_name.front() == '"')) {
       reexport_name.remove_prefix(1);
@@ -660,7 +681,7 @@ private:
 
     // Fast path: no escaping needed, use string_view directly
     if (!needsUnescaping(reexport_name)) {
-      re_exports.push_back(reexport_name);
+      re_exports.push_back(export_entry{reexport_name, at_line});
       return;
     }
 
@@ -670,7 +691,7 @@ private:
       return;  // Skip invalid escape sequences
     }
 
-    re_exports.push_back(std::move(unescaped.value()));
+    re_exports.push_back(export_entry{std::move(unescaped.value()), at_line});
   }
 
   bool readExportsOrModuleDotExports(char ch) {
@@ -712,7 +733,7 @@ private:
           switch (requireType) {
             case RequireType::ExportStar:
             case RequireType::ExportAssign:
-              addReexport(std::string_view(reexportStart, reexportEnd - reexportStart));
+              addReexport(std::string_view(reexportStart, reexportEnd - reexportStart), line_);
               return true;
             default:
               if (starExportStack < STAR_EXPORT_STACK_END) {
@@ -773,7 +794,7 @@ private:
             return;
           }
         }
-        addExport(std::string_view(startPos, endPos - startPos));
+        addExport(std::string_view(startPos, endPos - startPos), line_);
       } else if (ch == '\'' || ch == '"') {
         const char* start = pos;
         stringLiteral(ch);
@@ -786,7 +807,7 @@ private:
             pos = revertPos;
             return;
           }
-          addExport(std::string_view(start, end_pos - start));
+          addExport(std::string_view(start, end_pos - start), line_);
         }
       } else if (ch == '.' && matchesAt(pos + 1, end, "..")) {
         pos += 3;
@@ -825,7 +846,7 @@ private:
           const char* endPos = pos;
           ch = commentWhitespace();
           if (ch == '=') {
-            addExport(std::string_view(startPos, endPos - startPos));
+            addExport(std::string_view(startPos, endPos - startPos), line_);
             return;
           }
         }
@@ -843,7 +864,7 @@ private:
           pos++;
           ch = commentWhitespace();
           if (ch != '=') break;
-          addExport(std::string_view(startPos, endPos - startPos));
+          addExport(std::string_view(startPos, endPos - startPos), line_);
         }
         break;
       }
@@ -974,7 +995,7 @@ private:
             ch = commentWhitespace();
             if (ch != ':') break;
             if (exportStart && exportEnd)
-              addExport(std::string_view(exportStart, exportEnd - exportStart));
+              addExport(std::string_view(exportStart, exportEnd - exportStart), line_);
             pos = revertPos;
             return;
           } else if (ch == 'g') {
@@ -1042,7 +1063,7 @@ private:
             ch = commentWhitespace();
             if (ch != ')') break;
             if (exportStart && exportEnd)
-              addExport(std::string_view(exportStart, exportEnd - exportStart));
+              addExport(std::string_view(exportStart, exportEnd - exportStart), line_);
             return;
           }
           break;
@@ -1406,7 +1427,7 @@ private:
           StarExportBinding* curCheckBinding = &starExportStack_[0];
           while (curCheckBinding != starExportStack) {
             if (curCheckBinding->id == id) {
-              addReexport(curCheckBinding->specifier);
+              addReexport(curCheckBinding->specifier, line_);
               pos = revertPos;
               return;
             }
@@ -1506,9 +1527,10 @@ private:
   }
 
 public:
-  CJSLexer(std::vector<export_string>& out_exports, std::vector<export_string>& out_re_exports)
+  CJSLexer(std::vector<export_entry>& out_exports, std::vector<export_entry>& out_re_exports)
     : source(nullptr), pos(nullptr), end(nullptr), lastTokenPos(nullptr),
       templateStackDepth(0), openTokenDepth(0), templateDepth(0),
+      line_(1),
       lastSlashWasDivision(false), nextBraceIsClass(false),
       templateStack_{}, openTokenPosStack_{}, openClassPosStack{},
       starExportStack_{}, starExportStack(nullptr), STAR_EXPORT_STACK_END(nullptr),
@@ -1525,6 +1547,7 @@ public:
     templateStackDepth = 0;
     openTokenDepth = 0;
     templateDepth = std::numeric_limits<uint16_t>::max();
+    line_ = 1;
     lastSlashWasDivision = false;
     starExportStack = &starExportStack_[0];
     STAR_EXPORT_STACK_END = &starExportStack_[MAX_STAR_EXPORTS - 1];
@@ -1549,8 +1572,10 @@ public:
     while (pos++ < end) {
       ch = *pos;
 
-      if (ch == ' ' || (ch < 14 && ch > 8))
+      if (ch == ' ' || (ch < 14 && ch > 8)) {
+        countNewline(ch);
         continue;
+      }
 
       if (openTokenDepth == 0) {
         switch (ch) {
