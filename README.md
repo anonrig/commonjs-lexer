@@ -120,7 +120,7 @@ inline std::string_view get_string_view(const export_string& s);
 inline std::string_view get_string_view(const export_entry& e);
 ```
 
-Helper functions to get a `string_view` from an `export_string` or `export_entry`.
+Helper function to get a `string_view` from an `export_string` or `export_entry`.
 
 ### `lexer::get_last_error`
 

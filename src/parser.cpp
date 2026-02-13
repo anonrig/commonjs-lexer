@@ -340,9 +340,12 @@ private:
   std::vector<export_entry>& exports;
   std::vector<export_entry>& re_exports;
 
+  // Increments `line` when consuming a line terminator.
+  // - Counts '\n' as a newline.
+  // - Counts '\r' as a newline only when it is not part of a CRLF sequence.
+  //   (i.e., the next character is not '\n' or we're at end-of-input.)
   void countNewline(char ch) {
-    if (ch == '\n') ++line;
-    else if (ch == '\r' && (pos + 1 >= end || *(pos + 1) != '\n')) ++line;
+    line += (ch == '\n') || (ch == '\r' && (pos + 1 >= end || *(pos + 1) != '\n'));
   }
 
   // Character classification helpers using lookup tables

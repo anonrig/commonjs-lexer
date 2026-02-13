@@ -1163,6 +1163,28 @@ TEST(real_world_tests, line_numbers_crlf) {
   ASSERT_EQ(result->exports[1].line, 4);
 }
 
+TEST(real_world_tests, line_numbers_lfcr) {
+  auto result = lexer::parse_commonjs(
+    "// line 1\n\r"
+    "exports.z = 1;\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 1);
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "z");
+  ASSERT_EQ(result->exports[0].line, 3);
+}
+
+TEST(real_world_tests, line_numbers_cr) {
+  auto result = lexer::parse_commonjs(
+    "// line 1\r"
+    "exports.w = 1;\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 1);
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "w");
+  ASSERT_EQ(result->exports[0].line, 2);
+}
+
 TEST(real_world_tests, line_numbers_reexports) {
   auto result = lexer::parse_commonjs(
     "// line 1\n"
