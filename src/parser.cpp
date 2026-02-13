@@ -325,7 +325,7 @@ private:
   uint16_t openTokenDepth;
   uint16_t templateDepth;
 
-  uint32_t line_;
+  uint32_t line;
 
   bool lastSlashWasDivision;
   bool nextBraceIsClass;
@@ -341,8 +341,8 @@ private:
   std::vector<export_entry>& re_exports;
 
   void countNewline(char ch) {
-    if (ch == '\n') ++line_;
-    else if (ch == '\r' && (pos + 1 >= end || *(pos + 1) != '\n')) ++line_;
+    if (ch == '\n') ++line;
+    else if (ch == '\r' && (pos + 1 >= end || *(pos + 1) != '\n')) ++line;
   }
 
   // Character classification helpers using lookup tables
@@ -540,11 +540,11 @@ private:
         if (pos + 1 >= end) break;
         ch = *++pos;
         if (ch == '\r') {
-          ++line_;
+          ++line;
           if (*(pos + 1) == '\n')
             pos++;
         } else if (ch == '\n') {
-          ++line_;
+          ++line;
         }
       } else if (isBr(ch))
         break;
@@ -733,7 +733,7 @@ private:
           switch (requireType) {
             case RequireType::ExportStar:
             case RequireType::ExportAssign:
-              addReexport(std::string_view(reexportStart, reexportEnd - reexportStart), line_);
+              addReexport(std::string_view(reexportStart, reexportEnd - reexportStart), line);
               return true;
             default:
               if (starExportStack < STAR_EXPORT_STACK_END) {
@@ -794,7 +794,7 @@ private:
             return;
           }
         }
-        addExport(std::string_view(startPos, endPos - startPos), line_);
+        addExport(std::string_view(startPos, endPos - startPos), line);
       } else if (ch == '\'' || ch == '"') {
         const char* start = pos;
         stringLiteral(ch);
@@ -807,7 +807,7 @@ private:
             pos = revertPos;
             return;
           }
-          addExport(std::string_view(start, end_pos - start), line_);
+          addExport(std::string_view(start, end_pos - start), line);
         }
       } else if (ch == '.' && matchesAt(pos + 1, end, "..")) {
         pos += 3;
@@ -846,7 +846,7 @@ private:
           const char* endPos = pos;
           ch = commentWhitespace();
           if (ch == '=') {
-            addExport(std::string_view(startPos, endPos - startPos), line_);
+            addExport(std::string_view(startPos, endPos - startPos), line);
             return;
           }
         }
@@ -864,7 +864,7 @@ private:
           pos++;
           ch = commentWhitespace();
           if (ch != '=') break;
-          addExport(std::string_view(startPos, endPos - startPos), line_);
+          addExport(std::string_view(startPos, endPos - startPos), line);
         }
         break;
       }
@@ -995,7 +995,7 @@ private:
             ch = commentWhitespace();
             if (ch != ':') break;
             if (exportStart && exportEnd)
-              addExport(std::string_view(exportStart, exportEnd - exportStart), line_);
+              addExport(std::string_view(exportStart, exportEnd - exportStart), line);
             pos = revertPos;
             return;
           } else if (ch == 'g') {
@@ -1063,7 +1063,7 @@ private:
             ch = commentWhitespace();
             if (ch != ')') break;
             if (exportStart && exportEnd)
-              addExport(std::string_view(exportStart, exportEnd - exportStart), line_);
+              addExport(std::string_view(exportStart, exportEnd - exportStart), line);
             return;
           }
           break;
@@ -1427,7 +1427,7 @@ private:
           StarExportBinding* curCheckBinding = &starExportStack_[0];
           while (curCheckBinding != starExportStack) {
             if (curCheckBinding->id == id) {
-              addReexport(curCheckBinding->specifier, line_);
+              addReexport(curCheckBinding->specifier, line);
               pos = revertPos;
               return;
             }
@@ -1530,7 +1530,7 @@ public:
   CJSLexer(std::vector<export_entry>& out_exports, std::vector<export_entry>& out_re_exports)
     : source(nullptr), pos(nullptr), end(nullptr), lastTokenPos(nullptr),
       templateStackDepth(0), openTokenDepth(0), templateDepth(0),
-      line_(1),
+      line(1),
       lastSlashWasDivision(false), nextBraceIsClass(false),
       templateStack_{}, openTokenPosStack_{}, openClassPosStack{},
       starExportStack_{}, starExportStack(nullptr), STAR_EXPORT_STACK_END(nullptr),
@@ -1547,7 +1547,7 @@ public:
     templateStackDepth = 0;
     openTokenDepth = 0;
     templateDepth = std::numeric_limits<uint16_t>::max();
-    line_ = 1;
+    line = 1;
     lastSlashWasDivision = false;
     starExportStack = &starExportStack_[0];
     STAR_EXPORT_STACK_END = &starExportStack_[MAX_STAR_EXPORTS - 1];
