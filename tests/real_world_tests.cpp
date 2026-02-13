@@ -1132,3 +1132,80 @@ TEST(real_world_tests, exports_shorthand_syntax) {
   ASSERT_EQ(lexer::get_string_view(result->exports[2]), "c");
   SUCCEED();
 }
+
+TEST(real_world_tests, line_numbers_lf) {
+  auto result = lexer::parse_commonjs(
+    "// line 1\n"
+    "exports.a = 1;\n"
+    "\n"
+    "exports.b = 2;\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 2);
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "a");
+  ASSERT_EQ(result->exports[0].line, 2);
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "b");
+  ASSERT_EQ(result->exports[1].line, 4);
+}
+
+TEST(real_world_tests, line_numbers_crlf) {
+  auto result = lexer::parse_commonjs(
+    "// line 1\r\n"
+    "exports.x = 1;\r\n"
+    "\r\n"
+    "exports.y = 2;\r\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 2);
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "x");
+  ASSERT_EQ(result->exports[0].line, 2);
+  ASSERT_EQ(lexer::get_string_view(result->exports[1]), "y");
+  ASSERT_EQ(result->exports[1].line, 4);
+}
+
+TEST(real_world_tests, line_numbers_lfcr) {
+  auto result = lexer::parse_commonjs(
+    "// line 1\n\r"
+    "exports.z = 1;\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 1);
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "z");
+  ASSERT_EQ(result->exports[0].line, 3);
+}
+
+TEST(real_world_tests, line_numbers_cr) {
+  auto result = lexer::parse_commonjs(
+    "// line 1\r"
+    "exports.w = 1;\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 1);
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "w");
+  ASSERT_EQ(result->exports[0].line, 2);
+}
+
+TEST(real_world_tests, line_numbers_reexports) {
+  auto result = lexer::parse_commonjs(
+    "// line 1\n"
+    "module.exports = require('dep1');\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->re_exports.size(), 1);
+  ASSERT_EQ(lexer::get_string_view(result->re_exports[0]), "dep1");
+  ASSERT_EQ(result->re_exports[0].line, 2);
+}
+
+TEST(real_world_tests, line_numbers_after_block_comment) {
+  auto result = lexer::parse_commonjs(
+    "/*\n"
+    " * multi-line\n"
+    " * comment\n"
+    " */\n"
+    "exports.after_comment = 1;\n"
+  );
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->exports.size(), 1);
+  ASSERT_EQ(lexer::get_string_view(result->exports[0]), "after_comment");
+  ASSERT_EQ(result->exports[0].line, 5);
+}

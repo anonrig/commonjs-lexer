@@ -3,6 +3,7 @@
 
 #include "merve/version.h"
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -48,6 +49,14 @@ enum lexer_error {
 using export_string = std::variant<std::string, std::string_view>;
 
 /**
+ * @brief An export name together with its 1-based source line number.
+ */
+struct export_entry {
+  export_string name;
+  uint32_t line;  // 1-based line number
+};
+
+/**
  * @brief Result of parsing a CommonJS module.
  */
 struct lexer_analysis {
@@ -61,7 +70,7 @@ struct lexer_analysis {
    * - module.exports = { a, b, c }
    * - Object.defineProperty(exports, 'name', {...})
    */
-  std::vector<export_string> exports{};
+  std::vector<export_entry> exports{};
 
   /**
    * @brief Module specifiers from re-export patterns.
@@ -72,7 +81,7 @@ struct lexer_analysis {
    * - __export(require('other'))
    * - Object.keys(require('other')).forEach(...)
    */
-  std::vector<export_string> re_exports{};
+  std::vector<export_entry> re_exports{};
 };
 
 /**
@@ -87,6 +96,13 @@ struct lexer_analysis {
  */
 inline std::string_view get_string_view(const export_string& s) {
   return std::visit([](const auto& v) -> std::string_view { return v; }, s);
+}
+
+/**
+ * @brief Get a string_view from an export_entry (delegates to the name field).
+ */
+inline std::string_view get_string_view(const export_entry& e) {
+  return get_string_view(e.name);
 }
 
 /**
