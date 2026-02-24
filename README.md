@@ -9,6 +9,7 @@ A fast C++ lexer for extracting named exports from CommonJS modules. This librar
 - **Source Locations**: Each export includes a 1-based line number for tooling integration
 - **Unicode Support**: Properly unescapes JavaScript string literals including `\u{XXXX}` and surrogate pairs
 - **Optional SIMD Acceleration**: Can use [simdutf](https://github.com/simdutf/simdutf) for faster string operations
+- **C API**: Full C interface (`merve_c.h`) for use from C, FFI, or other languages
 - **No Dependencies**: Single-header distribution available (simdutf is optional)
 - **Cross-Platform**: Works on Linux, macOS, and Windows
 
@@ -31,6 +32,7 @@ target_link_libraries(your_target PRIVATE lexer::lexer)
 ### Single Header
 
 Copy `singleheader/merve.h` and `singleheader/merve.cpp` to your project.
+The C API header `singleheader/merve_c.h` is also included in the distribution.
 
 ## Usage
 
@@ -129,6 +131,95 @@ const std::optional<lexer_error>& get_last_error();
 ```
 
 Returns the last parse error, if any.
+
+## C API
+
+merve provides a C API (`merve_c.h`) for use from C programs, FFI bindings, or any language that can call C functions. The C API is compiled into the merve library alongside the C++ implementation.
+
+### C API Usage
+
+```c
+#include "merve_c.h"
+#include <stdio.h>
+
+int main(void) {
+  const char* source = "exports.foo = 1;\nexports.bar = 2;\n";
+
+  merve_analysis result = merve_parse_commonjs(source, strlen(source));
+
+  if (merve_is_valid(result)) {
+    size_t count = merve_get_exports_count(result);
+    printf("Found %zu exports:\n", count);
+    for (size_t i = 0; i < count; i++) {
+      merve_string name = merve_get_export_name(result, i);
+      uint32_t line = merve_get_export_line(result, i);
+      printf("  - %.*s (line %u)\n", (int)name.length, name.data, line);
+    }
+  } else {
+    printf("Parse error: %d\n", merve_get_last_error());
+  }
+
+  merve_free(result);
+  return 0;
+}
+```
+
+Output:
+```
+Found 2 exports:
+  - foo (line 1)
+  - bar (line 2)
+```
+
+### C API Reference
+
+#### Types
+
+| Type | Description |
+|------|-------------|
+| `merve_string` | Non-owning string reference (`data` + `length`). Not null-terminated. |
+| `merve_analysis` | Opaque handle to a parse result. Must be freed with `merve_free()`. |
+| `merve_version_components` | Struct with `major`, `minor`, `revision` fields. |
+
+#### Functions
+
+| Function | Description |
+|----------|-------------|
+| `merve_parse_commonjs(input, length)` | Parse CommonJS source. Returns a handle (NULL only on OOM). |
+| `merve_is_valid(result)` | Check if parsing succeeded. NULL-safe. |
+| `merve_free(result)` | Free a parse result. NULL-safe. |
+| `merve_get_exports_count(result)` | Number of named exports found. |
+| `merve_get_reexports_count(result)` | Number of re-export specifiers found. |
+| `merve_get_export_name(result, index)` | Get export name at index. Returns `{NULL, 0}` on error. |
+| `merve_get_export_line(result, index)` | Get 1-based line number of export. Returns 0 on error. |
+| `merve_get_reexport_name(result, index)` | Get re-export specifier at index. Returns `{NULL, 0}` on error. |
+| `merve_get_reexport_line(result, index)` | Get 1-based line number of re-export. Returns 0 on error. |
+| `merve_get_last_error()` | Last error code (`MERVE_ERROR_*`), or -1 if no error. |
+| `merve_get_version()` | Version string (e.g. `"1.0.1"`). |
+| `merve_get_version_components()` | Version as `{major, minor, revision}`. |
+
+#### Error Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MERVE_ERROR_UNEXPECTED_ESM_IMPORT` | 10 | Found ESM `import` declaration |
+| `MERVE_ERROR_UNEXPECTED_ESM_EXPORT` | 11 | Found ESM `export` declaration |
+| `MERVE_ERROR_UNEXPECTED_ESM_IMPORT_META` | 9 | Found `import.meta` |
+| `MERVE_ERROR_UNTERMINATED_STRING_LITERAL` | 6 | Unclosed string literal |
+| `MERVE_ERROR_UNTERMINATED_TEMPLATE_STRING` | 5 | Unclosed template literal |
+| `MERVE_ERROR_UNTERMINATED_REGEX` | 8 | Unclosed regular expression |
+| `MERVE_ERROR_UNEXPECTED_PAREN` | 1 | Unexpected `)` |
+| `MERVE_ERROR_UNEXPECTED_BRACE` | 2 | Unexpected `}` |
+| `MERVE_ERROR_UNTERMINATED_PAREN` | 3 | Unclosed `(` |
+| `MERVE_ERROR_UNTERMINATED_BRACE` | 4 | Unclosed `{` |
+| `MERVE_ERROR_TEMPLATE_NEST_OVERFLOW` | 12 | Template literal nesting too deep |
+
+#### Lifetime Rules
+
+- The `merve_analysis` handle must be freed with `merve_free()`.
+- `merve_string` values returned by accessors are valid as long as the handle has not been freed.
+- For exports backed by a `string_view` (most identifiers), the original source buffer must also remain valid.
+- All functions are NULL-safe: passing NULL returns safe defaults (false, 0, `{NULL, 0}`).
 
 ## Supported Patterns
 
@@ -243,8 +334,7 @@ cmake --build .
 ### Running Tests
 
 ```bash
-cmake --build . --target real_world_tests
-./tests/real_world_tests
+ctest --test-dir build
 ```
 
 ### Build Options

@@ -34,7 +34,7 @@ else:
     AMALGAMATE_OUTPUT_PATH = os.environ["AMALGAMATE_OUTPUT_PATH"]
 
 # this list excludes the "src/generic headers"
-ALLCFILES = ["parser.cpp"]
+ALLCFILES = ["parser.cpp", "merve_c.cpp"]
 
 # order matters
 ALLCHEADERS = ["merve.h"]
@@ -138,11 +138,20 @@ for c in ALLCFILES:
 
 amal_c.close()
 
+# Copy merve_c.h to the output directory (it is already standalone).
+MERVE_C_H_SRC = os.path.join(AMALGAMATE_INCLUDE_PATH, "merve_c.h")
+MERVE_C_H_DST = os.path.join(AMALGAMATE_OUTPUT_PATH, "merve_c.h")
+if os.path.exists(MERVE_C_H_SRC):
+    shutil.copy2(MERVE_C_H_SRC, MERVE_C_H_DST)
+    print(f"Copied {MERVE_C_H_SRC} to {MERVE_C_H_DST}")
+
 zf = zipfile.ZipFile(
     os.path.join(AMALGAMATE_OUTPUT_PATH, "singleheader.zip"), "w", zipfile.ZIP_DEFLATED
 )
 zf.write(os.path.join(AMALGAMATE_OUTPUT_PATH, OUTPUT_CPP), OUTPUT_CPP)
 zf.write(os.path.join(AMALGAMATE_OUTPUT_PATH, OUTPUT_H), OUTPUT_H)
+if os.path.exists(MERVE_C_H_DST):
+    zf.write(MERVE_C_H_DST, "merve_c.h")
 
 
 print("Done with all files generation.")

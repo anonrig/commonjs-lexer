@@ -131,7 +131,7 @@ if(NOT MERVE_COVERAGE AND NOT EMSCRIPTEN)
 endif()
 
 install(
-  FILES include/merve.h
+  FILES include/merve.h include/merve_c.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
   COMPONENT merve_development
 )
