@@ -310,8 +310,8 @@ struct StarExportBinding {
   std::string_view id;
 };
 
-// Global state for error tracking
-std::optional<lexer_error> last_error;
+// Thread-local state for error tracking (safe for concurrent parse calls).
+thread_local std::optional<lexer_error> last_error;
 
 // Lexer state class
 class CJSLexer {
