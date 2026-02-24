@@ -1,0 +1,36 @@
+[package]
+name = "merve"
+version = "1.0.1" # x-release-please-version
+edition = "2024"
+rust-version = "1.85"
+authors = ["Yagiz Nizipli <yagiz@nizipli.com>"]
+license = "Apache-2.0 OR MIT"
+description = "A fast C++ lexer for extracting named exports from CommonJS modules"
+repository = "https://github.com/nodejs/merve"
+categories = ["parsing", "development-tools"]
+keywords = ["commonjs", "cjs", "exports", "lexer", "javascript"]
+include = [
+  "src/**/*.rs",
+  "deps/**/*.cpp",
+  "deps/**/*.h",
+  "wasi_to_unknown.cpp",
+  "build.rs",
+  "Cargo.toml",
+  "LICENSE-*",
+  "README.md",
+]
+
+[features]
+default = ["std"]
+# pass `cpp_set_stdlib("c++")` to `cc`
+libcpp = []
+# enable allocations
+std = []
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+
+[build-dependencies]
+cc = { version = "1.1", features = ["parallel"] }
+link_args = "0.6"
+regex = { version = "1.11", features = [] }
