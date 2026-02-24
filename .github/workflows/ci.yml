@@ -130,3 +130,44 @@ jobs:
       - name: Test (Windows)
         if: matrix.os == 'windows-latest'
         run: ctest -C ${{ matrix.cmake_config }} --output-on-failure --test-dir build
+
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            toolchain: stable
+          - os: ubuntu-22.04
+            toolchain: nightly
+          - os: ubuntu-22.04-arm
+            toolchain: stable
+          - os: macos-14
+            toolchain: stable
+          - os: macos-15
+            toolchain: stable
+          - os: windows-latest
+            toolchain: stable
+
+    name: Rust ${{ matrix.toolchain }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: clippy
+
+      - name: Clippy
+        working-directory: rust
+        run: cargo clippy -- -D warnings
+
+      - name: Test
+        working-directory: rust
+        run: cargo test
+
+      - name: Test (no default features)
+        working-directory: rust
+        run: cargo test --no-default-features

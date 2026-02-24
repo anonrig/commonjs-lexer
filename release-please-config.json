@@ -4,7 +4,8 @@
       "release-type": "simple",
       "extra-files": [
         "CMakeLists.txt",
-        "include/merve/version.h"
+        "include/merve/version.h",
+        "rust/Cargo.toml"
       ]
     }
   }
