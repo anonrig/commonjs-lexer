@@ -38,7 +38,7 @@ use core::marker::PhantomData;
 /// Error codes returned by the merve lexer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LexerError {
-    Todo,
+    EmptySource,
     UnexpectedParen,
     UnexpectedBrace,
     UnterminatedParen,
@@ -60,7 +60,7 @@ impl LexerError {
     #[must_use]
     pub fn from_code(code: i32) -> Self {
         match code {
-            0 => Self::Todo,
+            0 => Self::EmptySource,
             1 => Self::UnexpectedParen,
             2 => Self::UnexpectedBrace,
             3 => Self::UnterminatedParen,
@@ -81,7 +81,7 @@ impl LexerError {
     #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Todo => "todo",
+            Self::EmptySource => "empty source",
             Self::UnexpectedParen => "unexpected parenthesis",
             Self::UnexpectedBrace => "unexpected brace",
             Self::UnterminatedParen => "unterminated parenthesis",
@@ -169,11 +169,7 @@ impl<'a> Analysis<'a> {
             return None;
         }
         let line = unsafe { ffi::merve_get_export_line(self.handle, index) };
-        if line == 0 {
-            None
-        } else {
-            Some(line)
-        }
+        if line == 0 { None } else { Some(line) }
     }
 
     /// Get the module specifier of the re-export at `index`.
@@ -197,11 +193,7 @@ impl<'a> Analysis<'a> {
             return None;
         }
         let line = unsafe { ffi::merve_get_reexport_line(self.handle, index) };
-        if line == 0 {
-            None
-        } else {
-            Some(line)
-        }
+        if line == 0 { None } else { Some(line) }
     }
 
     /// Iterate over all named exports.
@@ -319,21 +311,17 @@ impl ExactSizeIterator for ExportIter<'_, '_> {}
 /// assert_eq!(analysis.export_name(0), Some("hello"));
 /// ```
 pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError> {
-    // Rust uses a dangling pointer (0x1) for empty slices, which is not
-    // dereferenceable. Pass NULL instead; the C API handles NULL as "".
-    let (ptr, len) = if source.is_empty() {
-        (core::ptr::null(), 0)
-    } else {
-        (source.as_ptr().cast(), source.len())
-    };
-    let handle = unsafe { ffi::merve_parse_commonjs(ptr, len) };
+    if source.is_empty() {
+        return Err(LexerError::EmptySource);
+    }
+    let handle = unsafe { ffi::merve_parse_commonjs(source.as_ptr().cast(), source.len()) };
     if handle.is_null() {
         // NULL means allocation failure; map to a generic error
         let code = unsafe { ffi::merve_get_last_error() };
         return Err(if code >= 0 {
             LexerError::from_code(code)
         } else {
-            LexerError::Todo
+            LexerError::Unknown(code)
         });
     }
     if !unsafe { ffi::merve_is_valid(handle) } {
@@ -341,7 +329,7 @@ pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError> {
         let err = if code >= 0 {
             LexerError::from_code(code)
         } else {
-            LexerError::Todo
+            LexerError::Unknown(code)
         };
         unsafe { ffi::merve_free(handle) };
         return Err(err);
@@ -444,9 +432,9 @@ mod tests {
 
     #[test]
     fn empty_input() {
-        let analysis = parse_commonjs("").expect("empty should parse");
-        assert_eq!(analysis.exports_count(), 0);
-        assert_eq!(analysis.reexports_count(), 0);
+        let result = parse_commonjs("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), LexerError::EmptySource);
     }
 
     #[test]
