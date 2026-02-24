@@ -45,9 +45,9 @@ jobs:
       - name: Create singleheader.zip
         run: |
           cd build/singleheader
-          zip singleheader.zip merve.h merve.cpp
+          zip singleheader.zip merve.h merve.cpp merve_c.cpp
           mv singleheader.zip ../../singleheader/
-          cp merve.h merve.cpp ../../singleheader/
+          cp merve.h merve.cpp merve_c.cpp ../../singleheader/
 
       - name: Create release
         run: gh release upload "$RELEASE_TAG" singleheader/*
