@@ -329,6 +329,22 @@ impl ExactSizeIterator for ExportIter<'_, '_> {}
 /// assert_eq!(analysis.exports_count(), 1);
 /// assert_eq!(analysis.export_name(0), Some("hello"));
 /// ```
+///
+/// Export names borrow from the analysis handle, so leaking them past
+/// `analysis`'s lifetime is rejected at compile time:
+///
+/// ```compile_fail
+/// use merve::parse_commonjs;
+///
+/// fn main() {
+///     let src = "exports['\\u0061\\u0062'] = 1;";
+///     let leaked: &str = {
+///         let analysis = parse_commonjs(src).unwrap();
+///         analysis.export_name(0).unwrap()
+///     }; // `analysis` is dropped here.
+///     let _ = leaked;
+/// }
+/// ```
 pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError> {
     if source.is_empty() {
         return Err(LexerError::EmptySource);
