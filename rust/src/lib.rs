@@ -136,6 +136,17 @@ unsafe impl Send for Analysis<'_> {}
 unsafe impl Sync for Analysis<'_> {}
 
 impl<'a> Analysis<'a> {
+    #[inline]
+    fn str_from_ffi(&self, s: ffi::merve_string) -> &str {
+        if s.length == 0 {
+            return "";
+        }
+        unsafe {
+            let slice = core::slice::from_raw_parts(s.data.cast(), s.length);
+            core::str::from_utf8_unchecked(slice)
+        }
+    }
+
     /// Number of named exports found.
     #[must_use]
     pub fn exports_count(&self) -> usize {
@@ -152,12 +163,12 @@ impl<'a> Analysis<'a> {
     ///
     /// Returns `None` if `index` is out of bounds.
     #[must_use]
-    pub fn export_name(&self, index: usize) -> Option<&'a str> {
+    pub fn export_name(&self, index: usize) -> Option<&str> {
         if index >= self.exports_count() {
             return None;
         }
         let s = unsafe { ffi::merve_get_export_name(self.handle, index) };
-        Some(unsafe { s.as_str() })
+        Some(self.str_from_ffi(s))
     }
 
     /// Get the 1-based source line number of the export at `index`.
@@ -169,19 +180,23 @@ impl<'a> Analysis<'a> {
             return None;
         }
         let line = unsafe { ffi::merve_get_export_line(self.handle, index) };
-        if line == 0 { None } else { Some(line) }
+        if line == 0 {
+            None
+        } else {
+            Some(line)
+        }
     }
 
     /// Get the module specifier of the re-export at `index`.
     ///
     /// Returns `None` if `index` is out of bounds.
     #[must_use]
-    pub fn reexport_name(&self, index: usize) -> Option<&'a str> {
+    pub fn reexport_name(&self, index: usize) -> Option<&str> {
         if index >= self.reexports_count() {
             return None;
         }
         let s = unsafe { ffi::merve_get_reexport_name(self.handle, index) };
-        Some(unsafe { s.as_str() })
+        Some(self.str_from_ffi(s))
     }
 
     /// Get the 1-based source line number of the re-export at `index`.
@@ -193,7 +208,11 @@ impl<'a> Analysis<'a> {
             return None;
         }
         let line = unsafe { ffi::merve_get_reexport_line(self.handle, index) };
-        if line == 0 { None } else { Some(line) }
+        if line == 0 {
+            None
+        } else {
+            Some(line)
+        }
     }
 
     /// Iterate over all named exports.
@@ -260,8 +279,8 @@ pub struct ExportIter<'a, 'b> {
     count: usize,
 }
 
-impl<'a> Iterator for ExportIter<'a, '_> {
-    type Item = Export<'a>;
+impl<'a, 'b> Iterator for ExportIter<'a, 'b> {
+    type Item = Export<'b>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.count {
