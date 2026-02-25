@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/nodejs/merve/compare/v1.1.1...v1.1.2) (2026-02-25)
+
+
+### Bug Fixes
+
+* handle immutable releases ([#21](https://github.com/nodejs/merve/issues/21)) ([13480bc](https://github.com/nodejs/merve/commit/13480bc56ed56b1e2778d4fee1d0562e811b09eb))
+
 ## [1.1.1](https://github.com/nodejs/merve/compare/v1.1.0...v1.1.1) (2026-02-25)
 
 
