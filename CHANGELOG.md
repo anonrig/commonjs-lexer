@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/nodejs/merve/compare/v1.1.0...v1.1.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* tie rust export borrows to analysis lifetime ([0fed125](https://github.com/nodejs/merve/commit/0fed1256bbbee733020e1b75eb1aa7b3088b3034))
+* update release.yml ([7050760](https://github.com/nodejs/merve/commit/705076095196c3b94d6be6fa861334d997bd6cdc))
+
 ## [1.1.0](https://github.com/nodejs/merve/compare/v1.0.1...v1.1.0) (2026-02-25)
 
 
