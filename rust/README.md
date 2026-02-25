@@ -10,7 +10,7 @@ This crate provides safe Rust bindings to the [merve](https://github.com/nodejs/
 Add to your `Cargo.toml`:
 
 ```sh
-> cargo add merve
+cargo add merve
 ```
 
 Parse CommonJS source and iterate over exports:
