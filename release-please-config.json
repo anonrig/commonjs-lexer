@@ -2,6 +2,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
+      "draft": true,
       "extra-files": [
         "CMakeLists.txt",
         "include/merve/version.h",
