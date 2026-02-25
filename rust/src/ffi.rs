@@ -14,27 +14,6 @@ pub struct merve_string {
     pub length: usize,
 }
 
-impl merve_string {
-    /// Convert to a Rust `&str` with an arbitrary lifetime.
-    ///
-    /// Returns `""` when `length` is 0 (which includes the case where `data` is null).
-    ///
-    /// # Safety
-    /// The caller must ensure that the backing data outlives `'a` and is valid UTF-8.
-    /// The `merve_string` itself is a temporary POD value; the data it points to
-    /// lives in the original source buffer or the analysis handle.
-    #[must_use]
-    pub unsafe fn as_str<'a>(&self) -> &'a str {
-        if self.length == 0 {
-            return "";
-        }
-        unsafe {
-            let slice = core::slice::from_raw_parts(self.data.cast(), self.length);
-            core::str::from_utf8_unchecked(slice)
-        }
-    }
-}
-
 /// Opaque handle to a CommonJS parse result.
 pub type merve_analysis = *mut c_void;
 
