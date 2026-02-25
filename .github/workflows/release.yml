@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload release assets
         if: ${{ steps.release.outputs.release_created }}
-        run: gh release upload "$RELEASE_TAG" singleheader/*
+        run: gh release upload "$RELEASE_TAG" singleheader/singleheader.zip singleheader/merve.h singleheader/merve.cpp singleheader/merve_c.h
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
