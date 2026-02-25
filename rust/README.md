@@ -9,9 +9,8 @@ This crate provides safe Rust bindings to the [merve](https://github.com/nodejs/
 
 Add to your `Cargo.toml`:
 
-```toml
-[dependencies]
-merve = "0.1"
+```sh
+> cargo add merve
 ```
 
 Parse CommonJS source and iterate over exports:
@@ -37,14 +36,14 @@ for export in analysis.exports() {
 **std** (default): Enables `std::error::Error` impl for `LexerError`. Disable for `no_std`:
 
 ```toml
-merve = { version = "0.1", default-features = false }
+merve = { version = "...", default-features = false }
 ```
 
 **libcpp**: Build the underlying C++ code with `libc++` instead of `libstdc++`.
 Requires `libc++` to be installed:
 
 ```toml
-merve = { version = "0.1", features = ["libcpp"] }
+merve = { version = "...", features = ["libcpp"] }
 ```
 
 ## API
