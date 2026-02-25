@@ -1,6 +1,6 @@
 [package]
 name = "merve"
-version = "1.1.0" # x-release-please-version
+version = "1.1.1" # x-release-please-version
 edition = "2024"
 rust-version = "1.85"
 authors = ["Yagiz Nizipli <yagiz@nizipli.com>"]
