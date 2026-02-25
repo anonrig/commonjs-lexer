@@ -87,7 +87,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "rust/deps is up to date"
           else
-            git commit -m "chore: update rust/deps vendored sources"
+            git commit -m "chore: update rust/deps vendored sources [skip ci]"
             git push
           fi
 
