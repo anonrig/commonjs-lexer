@@ -16,25 +16,26 @@ namespace lexer {
  * @brief Error codes returned by the lexer when parsing fails.
  */
 enum lexer_error {
-  TODO,  // Reserved for future use
+  INVALID_UTF8 = 0,     ///< Input source is not valid UTF-8
+  TODO = INVALID_UTF8,  // Deprecated alias for backward compatibility
 
   // Syntax errors - indicate malformed JavaScript
-  UNEXPECTED_PAREN,                   ///< Unexpected closing parenthesis
-  UNEXPECTED_BRACE,                   ///< Unexpected closing brace
-  UNTERMINATED_PAREN,                 ///< Unclosed parenthesis
-  UNTERMINATED_BRACE,                 ///< Unclosed brace
-  UNTERMINATED_TEMPLATE_STRING,       ///< Unclosed template literal
-  UNTERMINATED_STRING_LITERAL,        ///< Unclosed string literal
-  UNTERMINATED_REGEX_CHARACTER_CLASS, ///< Unclosed regex character class
-  UNTERMINATED_REGEX,                 ///< Unclosed regular expression
+  UNEXPECTED_PAREN,                    ///< Unexpected closing parenthesis
+  UNEXPECTED_BRACE,                    ///< Unexpected closing brace
+  UNTERMINATED_PAREN,                  ///< Unclosed parenthesis
+  UNTERMINATED_BRACE,                  ///< Unclosed brace
+  UNTERMINATED_TEMPLATE_STRING,        ///< Unclosed template literal
+  UNTERMINATED_STRING_LITERAL,         ///< Unclosed string literal
+  UNTERMINATED_REGEX_CHARACTER_CLASS,  ///< Unclosed regex character class
+  UNTERMINATED_REGEX,                  ///< Unclosed regular expression
 
   // ESM syntax errors - indicate the file should be parsed as ESM instead
-  UNEXPECTED_ESM_IMPORT_META, ///< Found import.meta (ESM only)
-  UNEXPECTED_ESM_IMPORT,      ///< Found import declaration (ESM only)
-  UNEXPECTED_ESM_EXPORT,      ///< Found export declaration (ESM only)
+  UNEXPECTED_ESM_IMPORT_META,  ///< Found import.meta (ESM only)
+  UNEXPECTED_ESM_IMPORT,       ///< Found import declaration (ESM only)
+  UNEXPECTED_ESM_EXPORT,       ///< Found export declaration (ESM only)
 
   // Resource limit errors
-  TEMPLATE_NEST_OVERFLOW, ///< Template literal nesting too deep
+  TEMPLATE_NEST_OVERFLOW,  ///< Template literal nesting too deep
 };
 
 /**
@@ -44,6 +45,7 @@ enum lexer_error {
  * - std::string_view: For simple identifiers (zero-copy, points to source)
  * - std::string: For exports requiring unescaping (e.g., Unicode escapes)
  *
+ * All values are guaranteed to be valid UTF-8.
  * Use get_string_view() to access the value uniformly.
  */
 using export_string = std::variant<std::string, std::string_view>;
@@ -121,6 +123,8 @@ inline std::string_view get_string_view(const export_entry& e) {
  *         if parsing failed. Use get_last_error() to get error details.
  *
  * @note The source must remain valid while using string_view exports.
+ * @note The source must be valid UTF-8, otherwise parsing fails with
+ *       lexer_error::INVALID_UTF8.
  * @note ESM syntax (import/export declarations) will cause an error.
  *
  * Example:

@@ -21,6 +21,10 @@ else()
   target_link_libraries(c_api_tests PRIVATE GTest::gtest_main)
   gtest_discover_tests(c_api_tests)
 
+  add_executable(utf8_contract_tests utf8_contract_tests.cpp)
+  target_link_libraries(utf8_contract_tests PRIVATE GTest::gtest_main)
+  gtest_discover_tests(utf8_contract_tests)
+
   # Verify merve_c.h compiles as pure C (compile-only test).
   add_executable(c_api_compile_test c_api_compile_test.c)
   target_include_directories(c_api_compile_test PRIVATE ${PROJECT_SOURCE_DIR}/include)
@@ -44,6 +48,7 @@ else()
   if(MSVC OR MINGW)
     target_compile_definitions(real_world_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
     target_compile_definitions(c_api_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_definitions(utf8_contract_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
   endif()
 
 endif()

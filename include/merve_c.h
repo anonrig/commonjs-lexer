@@ -13,6 +13,7 @@
  * @brief Non-owning string reference.
  *
  * The data pointer is NOT null-terminated. Always use the length field.
+ * Returned names are guaranteed to be valid UTF-8.
  *
  * The data is valid as long as:
  * - The merve_analysis handle that produced it has not been freed.
@@ -40,7 +41,8 @@ typedef struct {
 } merve_version_components;
 
 /* Error codes corresponding to lexer::lexer_error values. */
-#define MERVE_ERROR_TODO 0
+#define MERVE_ERROR_INVALID_UTF8 0
+#define MERVE_ERROR_TODO MERVE_ERROR_INVALID_UTF8 /* Deprecated alias */
 #define MERVE_ERROR_UNEXPECTED_PAREN 1
 #define MERVE_ERROR_UNEXPECTED_BRACE 2
 #define MERVE_ERROR_UNTERMINATED_PAREN 3
@@ -71,6 +73,8 @@ extern "C" {
  * @param length Length of the input in bytes.
  * @return A handle to the parse result, or NULL on out-of-memory.
  *         Use merve_is_valid() to check if parsing succeeded.
+ * @note Input must be valid UTF-8, otherwise parsing fails with
+ *       MERVE_ERROR_INVALID_UTF8.
  */
 merve_analysis merve_parse_commonjs(const char* input, size_t length);
 
@@ -165,7 +169,7 @@ const char* merve_get_version(void);
 merve_version_components merve_get_version_components(void);
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif
 
 #endif /* MERVE_C_H */

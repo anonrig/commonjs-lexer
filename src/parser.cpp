@@ -150,6 +150,80 @@ inline void encodeUtf8(std::string& out, uint32_t codepoint) {
 #endif
 }
 
+inline bool isUtf8ContinuationByte(unsigned char c) {
+  return (c & 0xC0) == 0x80;
+}
+
+bool isValidUtf8(std::string_view input) {
+  if (input.empty()) return true;
+
+#ifdef MERVE_USE_SIMDUTF
+  return simdutf::validate_utf8(input.data(), input.size());
+#else
+  const auto* bytes = reinterpret_cast<const unsigned char*>(input.data());
+  size_t i = 0;
+
+  while (i < input.size()) {
+    unsigned char b0 = bytes[i];
+    if (b0 <= 0x7F) {
+      ++i;
+      continue;
+    }
+
+    if (b0 >= 0xC2 && b0 <= 0xDF) {
+      if (i + 1 >= input.size() || !isUtf8ContinuationByte(bytes[i + 1])) {
+        return false;
+      }
+      i += 2;
+      continue;
+    }
+
+    if (b0 >= 0xE0 && b0 <= 0xEF) {
+      if (i + 2 >= input.size()) {
+        return false;
+      }
+      unsigned char b1 = bytes[i + 1];
+      unsigned char b2 = bytes[i + 2];
+      if (!isUtf8ContinuationByte(b1) || !isUtf8ContinuationByte(b2)) {
+        return false;
+      }
+      if (b0 == 0xE0 && b1 < 0xA0) {
+        return false;  // Overlong encoding
+      }
+      if (b0 == 0xED && b1 > 0x9F) {
+        return false;  // UTF-16 surrogate range
+      }
+      i += 3;
+      continue;
+    }
+
+    if (b0 >= 0xF0 && b0 <= 0xF4) {
+      if (i + 3 >= input.size()) {
+        return false;
+      }
+      unsigned char b1 = bytes[i + 1];
+      unsigned char b2 = bytes[i + 2];
+      unsigned char b3 = bytes[i + 3];
+      if (!isUtf8ContinuationByte(b1) || !isUtf8ContinuationByte(b2) || !isUtf8ContinuationByte(b3)) {
+        return false;
+      }
+      if (b0 == 0xF0 && b1 < 0x90) {
+        return false;  // Overlong encoding
+      }
+      if (b0 == 0xF4 && b1 > 0x8F) {
+        return false;  // Above U+10FFFF
+      }
+      i += 4;
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+#endif
+}
+
 // Unescape JavaScript string escape sequences
 // Returns empty optional on invalid escape sequences (like lone surrogates)
 std::optional<std::string> unescapeJsString(std::string_view str) {
@@ -181,7 +255,7 @@ std::optional<std::string> unescapeJsString(std::string_view str) {
         int h1 = hexDigit(static_cast<unsigned char>(str[i + 1]));
         int h2 = hexDigit(static_cast<unsigned char>(str[i + 2]));
         if (h1 < 0 || h2 < 0) return std::nullopt;
-        result.push_back(static_cast<char>((h1 << 4) | h2));
+        encodeUtf8(result, static_cast<uint32_t>((h1 << 4) | h2));
         i += 2;
         break;
       }
@@ -1727,6 +1801,11 @@ public:
 
 std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents) {
   last_error.reset();
+
+  if (!isValidUtf8(file_contents)) {
+    last_error = lexer_error::INVALID_UTF8;
+    return std::nullopt;
+  }
 
   lexer_analysis result;
   CJSLexer lexer(result.exports, result.re_exports);
