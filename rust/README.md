@@ -65,9 +65,9 @@ the source buffer (zero-copy).
 | `exports_count()` | `usize` | Number of named exports |
 | `reexports_count()` | `usize` | Number of re-export specifiers |
 | `export_name(index)` | `Option<&'a str>` | Export name at index |
-| `export_line(index)` | `Option<u32>` | 1-based line number of export |
+| `export_line(index)` | `Option<NonZeroU32>` | 1-based non-zero line number of export |
 | `reexport_name(index)` | `Option<&'a str>` | Re-export specifier at index |
-| `reexport_line(index)` | `Option<u32>` | 1-based line number of re-export |
+| `reexport_line(index)` | `Option<NonZeroU32>` | 1-based non-zero line number of re-export |
 | `exports()` | `ExportIter` | Iterator over all exports |
 | `reexports()` | `ExportIter` | Iterator over all re-exports |
 
@@ -76,7 +76,7 @@ the source buffer (zero-copy).
 ```rust
 pub struct Export<'a> {
     pub name: &'a str,
-    pub line: u32,
+    pub line: NonZeroU32,
 }
 ```
 
