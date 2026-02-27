@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/nodejs/merve/compare/v1.1.2...v1.1.3) (2026-02-27)
+
+
+### Bug Fixes
+
+* **rust:** encode non-zero line invariant in API ([#31](https://github.com/nodejs/merve/issues/31)) ([9966022](https://github.com/nodejs/merve/commit/9966022893140e6cd812ae21991421ea2ecbcdc0))
+
 ## [1.1.2](https://github.com/nodejs/merve/compare/v1.1.1...v1.1.2) (2026-02-25)
 
 
