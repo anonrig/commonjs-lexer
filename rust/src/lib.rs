@@ -34,6 +34,7 @@ extern crate std;
 
 use core::fmt;
 use core::marker::PhantomData;
+use core::num::NonZeroU32;
 
 /// Error codes returned by the merve lexer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -175,16 +176,12 @@ impl<'a> Analysis<'a> {
     ///
     /// Returns `None` if `index` is out of bounds.
     #[must_use]
-    pub fn export_line(&self, index: usize) -> Option<u32> {
+    pub fn export_line(&self, index: usize) -> Option<NonZeroU32> {
         if index >= self.exports_count() {
             return None;
         }
         let line = unsafe { ffi::merve_get_export_line(self.handle, index) };
-        if line == 0 {
-            None
-        } else {
-            Some(line)
-        }
+        NonZeroU32::new(line)
     }
 
     /// Get the module specifier of the re-export at `index`.
@@ -203,16 +200,12 @@ impl<'a> Analysis<'a> {
     ///
     /// Returns `None` if `index` is out of bounds.
     #[must_use]
-    pub fn reexport_line(&self, index: usize) -> Option<u32> {
+    pub fn reexport_line(&self, index: usize) -> Option<NonZeroU32> {
         if index >= self.reexports_count() {
             return None;
         }
         let line = unsafe { ffi::merve_get_reexport_line(self.handle, index) };
-        if line == 0 {
-            None
-        } else {
-            Some(line)
-        }
+        NonZeroU32::new(line)
     }
 
     /// Iterate over all named exports.
@@ -253,7 +246,7 @@ pub struct Export<'a> {
     /// The export name (or module specifier for re-exports).
     pub name: &'a str,
     /// 1-based source line number.
-    pub line: u32,
+    pub line: NonZeroU32,
 }
 
 impl fmt::Display for Export<'_> {
@@ -290,12 +283,20 @@ impl<'a, 'b> Iterator for ExportIter<'a, 'b> {
         self.index += 1;
         let (name, line) = match self.kind {
             ExportKind::Export => (
-                self.analysis.export_name(i).unwrap_or(""),
-                self.analysis.export_line(i).unwrap_or(0),
+                self.analysis
+                    .export_name(i)
+                    .expect("invariant: export index is in bounds"),
+                self.analysis
+                    .export_line(i)
+                    .expect("invariant: export line is non-zero and in bounds"),
             ),
             ExportKind::ReExport => (
-                self.analysis.reexport_name(i).unwrap_or(""),
-                self.analysis.reexport_line(i).unwrap_or(0),
+                self.analysis
+                    .reexport_name(i)
+                    .expect("invariant: re-export index is in bounds"),
+                self.analysis
+                    .reexport_line(i)
+                    .expect("invariant: re-export line is non-zero and in bounds"),
             ),
         };
         Some(Export { name, line })
@@ -402,6 +403,7 @@ pub fn version_components() -> (i32, i32, i32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::num::NonZeroU32;
 
     #[test]
     fn version_is_not_empty() {
@@ -486,9 +488,9 @@ mod tests {
     fn export_lines() {
         let source = "exports.a = 1;\nexports.b = 2;\nexports.c = 3;";
         let analysis = parse_commonjs(source).expect("should parse");
-        assert_eq!(analysis.export_line(0), Some(1));
-        assert_eq!(analysis.export_line(1), Some(2));
-        assert_eq!(analysis.export_line(2), Some(3));
+        assert_eq!(analysis.export_line(0), NonZeroU32::new(1));
+        assert_eq!(analysis.export_line(1), NonZeroU32::new(2));
+        assert_eq!(analysis.export_line(2), NonZeroU32::new(3));
     }
 
     #[cfg(feature = "std")]
@@ -535,7 +537,7 @@ mod tests {
     fn export_display_impl() {
         let e = Export {
             name: "foo",
-            line: 42,
+            line: NonZeroU32::new(42).unwrap(),
         };
         assert_eq!(format!("{e}"), "foo (line 42)");
     }
