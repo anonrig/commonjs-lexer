@@ -622,6 +622,47 @@ mod tests {
         assert_eq!(loc.offset, 0);
     }
 
+    #[cfg(feature = "error-location")]
+    #[test]
+    fn parse_with_location_crlf_position() {
+        let source = "\r\n  import 'x';";
+        let result = parse_commonjs_with_location(source);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, LexerError::UnexpectedEsmImport);
+        let loc = err.location.expect("location should be present");
+        assert_eq!(loc.line, NonZeroU32::new(2).unwrap());
+        assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
+        assert_eq!(loc.offset, 4);
+    }
+
+    #[cfg(feature = "error-location")]
+    #[test]
+    fn parse_with_location_import_meta_and_eof() {
+        let import_meta = parse_commonjs_with_location("\n  import.meta.url");
+        assert!(import_meta.is_err());
+        let import_meta_err = import_meta.unwrap_err();
+        assert_eq!(import_meta_err.kind, LexerError::UnexpectedEsmImportMeta);
+        let import_meta_loc = import_meta_err
+            .location
+            .expect("import.meta location should be present");
+        assert_eq!(import_meta_loc.line, NonZeroU32::new(2).unwrap());
+        assert_eq!(import_meta_loc.column, NonZeroU32::new(3).unwrap());
+        assert_eq!(import_meta_loc.offset, 3);
+
+        let eof = parse_commonjs_with_location("(a + b");
+        assert!(eof.is_err());
+        let eof_err = eof.unwrap_err();
+        assert_eq!(eof_err.kind, LexerError::UnterminatedParen);
+        let eof_loc = eof_err
+            .location
+            .expect("unterminated paren location should be present");
+        assert_eq!(eof_loc.line, NonZeroU32::new(1).unwrap());
+        assert_eq!(eof_loc.column, NonZeroU32::new(7).unwrap());
+        assert_eq!(eof_loc.offset, 6);
+    }
+
     #[test]
     fn out_of_bounds_returns_none() {
         let source = "exports.x = 1;";

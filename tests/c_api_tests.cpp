@@ -141,6 +141,86 @@ TEST(c_api_tests, parse_commonjs_ex_error_location) {
   merve_free(result);
 }
 
+TEST(c_api_tests, parse_commonjs_ex_error_location_crlf) {
+  const char* source = "\r\n  import 'x';";
+  merve_error_loc loc{123, 456, 789};
+  merve_analysis result =
+      merve_parse_commonjs_ex(source, std::strlen(source), &loc);
+  ASSERT_NE(result, nullptr);
+  ASSERT_FALSE(merve_is_valid(result));
+  ASSERT_EQ(merve_get_last_error(), MERVE_ERROR_UNEXPECTED_ESM_IMPORT);
+
+#if defined(MERVE_ENABLE_ERROR_LOCATION)
+  ASSERT_EQ(loc.line, 2u);
+  ASSERT_EQ(loc.column, 3u);
+  ASSERT_EQ(loc.offset, 4u);
+#else
+  ASSERT_TRUE(merve_error_loc_is_zero(loc));
+#endif
+
+  merve_free(result);
+}
+
+TEST(c_api_tests, parse_commonjs_ex_export_error_location) {
+  const char* source = "\n  export { x };";
+  merve_error_loc loc{123, 456, 789};
+  merve_analysis result =
+      merve_parse_commonjs_ex(source, std::strlen(source), &loc);
+  ASSERT_NE(result, nullptr);
+  ASSERT_FALSE(merve_is_valid(result));
+  ASSERT_EQ(merve_get_last_error(), MERVE_ERROR_UNEXPECTED_ESM_EXPORT);
+
+#if defined(MERVE_ENABLE_ERROR_LOCATION)
+  ASSERT_EQ(loc.line, 2u);
+  ASSERT_EQ(loc.column, 3u);
+  ASSERT_EQ(loc.offset, 3u);
+#else
+  ASSERT_TRUE(merve_error_loc_is_zero(loc));
+#endif
+
+  merve_free(result);
+}
+
+TEST(c_api_tests, parse_commonjs_ex_import_meta_error_location) {
+  const char* source = "\n  import.meta.url";
+  merve_error_loc loc{123, 456, 789};
+  merve_analysis result =
+      merve_parse_commonjs_ex(source, std::strlen(source), &loc);
+  ASSERT_NE(result, nullptr);
+  ASSERT_FALSE(merve_is_valid(result));
+  ASSERT_EQ(merve_get_last_error(), MERVE_ERROR_UNEXPECTED_ESM_IMPORT_META);
+
+#if defined(MERVE_ENABLE_ERROR_LOCATION)
+  ASSERT_EQ(loc.line, 2u);
+  ASSERT_EQ(loc.column, 3u);
+  ASSERT_EQ(loc.offset, 3u);
+#else
+  ASSERT_TRUE(merve_error_loc_is_zero(loc));
+#endif
+
+  merve_free(result);
+}
+
+TEST(c_api_tests, parse_commonjs_ex_eof_unterminated_paren_location) {
+  const char* source = "(a + b";
+  merve_error_loc loc{123, 456, 789};
+  merve_analysis result =
+      merve_parse_commonjs_ex(source, std::strlen(source), &loc);
+  ASSERT_NE(result, nullptr);
+  ASSERT_FALSE(merve_is_valid(result));
+  ASSERT_EQ(merve_get_last_error(), MERVE_ERROR_UNTERMINATED_PAREN);
+
+#if defined(MERVE_ENABLE_ERROR_LOCATION)
+  ASSERT_EQ(loc.line, 1u);
+  ASSERT_EQ(loc.column, 7u);
+  ASSERT_EQ(loc.offset, 6u);
+#else
+  ASSERT_TRUE(merve_error_loc_is_zero(loc));
+#endif
+
+  merve_free(result);
+}
+
 TEST(c_api_tests, parse_commonjs_ex_accepts_null_out_err) {
   const char* source = "import 'x';";
   merve_analysis result =
