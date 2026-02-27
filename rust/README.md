@@ -46,6 +46,13 @@ Requires `libc++` to be installed:
 merve = { version = "...", features = ["libcpp"] }
 ```
 
+**error-location**: Enables location-aware parse errors via
+`parse_commonjs_with_location`.
+
+```toml
+merve = { version = "...", features = ["error-location"] }
+```
+
 ## API
 
 ### `parse_commonjs`
@@ -57,6 +64,17 @@ pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError>
 Parse CommonJS source code and extract export information. The returned
 `Analysis` borrows from `source` because export names may point directly into
 the source buffer (zero-copy).
+
+### `parse_commonjs_with_location` (`error-location` feature)
+
+```rust
+pub fn parse_commonjs_with_location(
+    source: &str,
+) -> Result<Analysis<'_>, LocatedLexerError>
+```
+
+Like `parse_commonjs`, but returns a `LocatedLexerError` that includes
+`kind: LexerError` plus optional location (`line`, `column`, `offset`).
 
 ### `Analysis<'a>`
 
@@ -99,6 +117,17 @@ Returned when the input contains ESM syntax or malformed constructs:
 | `TemplateNestOverflow` | Template literal nesting too deep |
 
 `LexerError` implements `Display` and, with the `std` feature, `std::error::Error`.
+
+### `LocatedLexerError` (`error-location` feature)
+
+```rust
+pub struct LocatedLexerError {
+    pub kind: LexerError,
+    pub location: Option<ErrorLocation>,
+}
+```
+
+`ErrorLocation` uses 1-based `line`/`column` and 0-based byte `offset`.
 
 ### Versioning helpers
 

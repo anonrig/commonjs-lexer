@@ -11,6 +11,10 @@ static bool merve_string_eq(merve_string s, const char* expected) {
   return std::memcmp(s.data, expected, expected_len) == 0;
 }
 
+static bool merve_error_loc_is_zero(merve_error_loc loc) {
+  return loc.line == 0 && loc.column == 0 && loc.offset == 0;
+}
+
 TEST(c_api_tests, version_string) {
   const char* version = merve_get_version();
   ASSERT_NE(version, nullptr);
@@ -100,6 +104,47 @@ TEST(c_api_tests, esbuild_hint_style) {
 TEST(c_api_tests, esm_import_error) {
   const char* source = "import 'x';";
   merve_analysis result = merve_parse_commonjs(source, std::strlen(source));
+  ASSERT_NE(result, nullptr);
+  ASSERT_FALSE(merve_is_valid(result));
+  ASSERT_EQ(merve_get_last_error(), MERVE_ERROR_UNEXPECTED_ESM_IMPORT);
+  merve_free(result);
+}
+
+TEST(c_api_tests, parse_commonjs_ex_success_clears_error_location) {
+  const char* source = "exports.foo = 1;";
+  merve_error_loc loc{9, 9, 9};
+  merve_analysis result =
+      merve_parse_commonjs_ex(source, std::strlen(source), &loc);
+  ASSERT_NE(result, nullptr);
+  ASSERT_TRUE(merve_is_valid(result));
+  ASSERT_TRUE(merve_error_loc_is_zero(loc));
+  merve_free(result);
+}
+
+TEST(c_api_tests, parse_commonjs_ex_error_location) {
+  const char* source = "\n  import 'x';";
+  merve_error_loc loc{123, 456, 789};
+  merve_analysis result =
+      merve_parse_commonjs_ex(source, std::strlen(source), &loc);
+  ASSERT_NE(result, nullptr);
+  ASSERT_FALSE(merve_is_valid(result));
+  ASSERT_EQ(merve_get_last_error(), MERVE_ERROR_UNEXPECTED_ESM_IMPORT);
+
+#if defined(MERVE_ENABLE_ERROR_LOCATION)
+  ASSERT_EQ(loc.line, 2u);
+  ASSERT_EQ(loc.column, 3u);
+  ASSERT_EQ(loc.offset, 3u);
+#else
+  ASSERT_TRUE(merve_error_loc_is_zero(loc));
+#endif
+
+  merve_free(result);
+}
+
+TEST(c_api_tests, parse_commonjs_ex_accepts_null_out_err) {
+  const char* source = "import 'x';";
+  merve_analysis result =
+      merve_parse_commonjs_ex(source, std::strlen(source), NULL);
   ASSERT_NE(result, nullptr);
   ASSERT_FALSE(merve_is_valid(result));
   ASSERT_EQ(merve_get_last_error(), MERVE_ERROR_UNEXPECTED_ESM_IMPORT);

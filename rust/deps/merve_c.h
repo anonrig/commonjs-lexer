@@ -39,6 +39,20 @@ typedef struct {
   int revision;
 } merve_version_components;
 
+/**
+ * @brief Source location for a parse error.
+ *
+ * - line and column are 1-based.
+ * - offset is 0-based and measured in bytes from the start of input.
+ *
+ * A zeroed location (`{0, 0, 0}`) means the location is unavailable.
+ */
+typedef struct {
+  uint32_t line;
+  uint32_t column;
+  size_t offset;
+} merve_error_loc;
+
 /* Error codes corresponding to lexer::lexer_error values. */
 #define MERVE_ERROR_TODO 0
 #define MERVE_ERROR_UNEXPECTED_PAREN 1
@@ -73,6 +87,25 @@ extern "C" {
  *         Use merve_is_valid() to check if parsing succeeded.
  */
 merve_analysis merve_parse_commonjs(const char* input, size_t length);
+
+/**
+ * Parse CommonJS source code and optionally return error location.
+ *
+ * Behaves like merve_parse_commonjs(). If @p out_err is non-NULL, it is always
+ * written:
+ * - On success: set to {0, 0, 0}.
+ * - On parse failure with known location: set to that location.
+ * - On parse failure without available location: set to {0, 0, 0}.
+ *
+ * @param input   Pointer to the JavaScript source (need not be
+ * null-terminated). NULL is treated as an empty string.
+ * @param length  Length of the input in bytes.
+ * @param out_err Optional output pointer for parse error location.
+ * @return A handle to the parse result, or NULL on out-of-memory.
+ *         Use merve_is_valid() to check if parsing succeeded.
+ */
+merve_analysis merve_parse_commonjs_ex(const char* input, size_t length,
+                                       merve_error_loc* out_err);
 
 /**
  * Check whether the parse result is valid (parsing succeeded).

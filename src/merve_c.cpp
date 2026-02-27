@@ -14,9 +14,31 @@ static merve_string merve_string_create(const char* data, size_t length) {
   return out;
 }
 
+static void merve_error_loc_clear(merve_error_loc* out_err) {
+  if (!out_err) return;
+  out_err->line = 0;
+  out_err->column = 0;
+  out_err->offset = 0;
+}
+
+static void merve_error_loc_set(merve_error_loc* out_err,
+                                const lexer::error_location& loc) {
+  if (!out_err) return;
+  out_err->line = loc.line;
+  out_err->column = loc.column;
+  out_err->offset = loc.offset;
+}
+
 extern "C" {
 
 merve_analysis merve_parse_commonjs(const char* input, size_t length) {
+  return merve_parse_commonjs_ex(input, length, nullptr);
+}
+
+merve_analysis merve_parse_commonjs_ex(const char* input, size_t length,
+                                       merve_error_loc* out_err) {
+  merve_error_loc_clear(out_err);
+
   merve_analysis_impl* impl = new (std::nothrow) merve_analysis_impl();
   if (!impl) return nullptr;
   if (input != nullptr) {
@@ -24,6 +46,15 @@ merve_analysis merve_parse_commonjs(const char* input, size_t length) {
   } else {
     impl->result = lexer::parse_commonjs(std::string_view("", 0));
   }
+
+  if (!impl->result.has_value() && out_err) {
+    const std::optional<lexer::error_location>& err_loc =
+        lexer::get_last_error_location();
+    if (err_loc.has_value()) {
+      merve_error_loc_set(out_err, err_loc.value());
+    }
+  }
+
   return static_cast<merve_analysis>(impl);
 }
 

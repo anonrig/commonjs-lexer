@@ -132,6 +132,25 @@ const std::optional<lexer_error>& get_last_error();
 
 Returns the last parse error, if any.
 
+### `lexer::get_last_error_location`
+
+```cpp
+const std::optional<error_location>& get_last_error_location();
+```
+
+Returns the location of the last parse error, if available. Location tracking
+is enabled when built with `MERVE_ENABLE_ERROR_LOCATION`.
+
+### `lexer::error_location`
+
+```cpp
+struct error_location {
+  uint32_t line;    // 1-based
+  uint32_t column;  // 1-based
+  size_t offset;    // 0-based byte offset
+};
+```
+
 ## C API
 
 merve provides a C API (`merve_c.h`) for use from C programs, FFI bindings, or any language that can call C functions. The C API is compiled into the merve library alongside the C++ implementation.
@@ -141,11 +160,14 @@ merve provides a C API (`merve_c.h`) for use from C programs, FFI bindings, or a
 ```c
 #include "merve_c.h"
 #include <stdio.h>
+#include <string.h>
 
 int main(void) {
   const char* source = "exports.foo = 1;\nexports.bar = 2;\n";
 
-  merve_analysis result = merve_parse_commonjs(source, strlen(source));
+  merve_error_loc err_loc = {0, 0, 0};
+  merve_analysis result = merve_parse_commonjs_ex(
+      source, strlen(source), &err_loc);
 
   if (merve_is_valid(result)) {
     size_t count = merve_get_exports_count(result);
@@ -157,6 +179,10 @@ int main(void) {
     }
   } else {
     printf("Parse error: %d\n", merve_get_last_error());
+    if (err_loc.line != 0) {
+      printf("  at line %u, column %u (byte offset %zu)\n",
+             err_loc.line, err_loc.column, err_loc.offset);
+    }
   }
 
   merve_free(result);
@@ -180,12 +206,14 @@ Found 2 exports:
 | `merve_string` | Non-owning string reference (`data` + `length`). Not null-terminated. |
 | `merve_analysis` | Opaque handle to a parse result. Must be freed with `merve_free()`. |
 | `merve_version_components` | Struct with `major`, `minor`, `revision` fields. |
+| `merve_error_loc` | Error location (`line`, `column`, `offset`). `{0,0,0}` means unavailable. |
 
 #### Functions
 
 | Function | Description |
 |----------|-------------|
 | `merve_parse_commonjs(input, length)` | Parse CommonJS source. Returns a handle (NULL only on OOM). |
+| `merve_parse_commonjs_ex(input, length, out_err)` | Parse CommonJS source and optionally fill error location. |
 | `merve_is_valid(result)` | Check if parsing succeeded. NULL-safe. |
 | `merve_free(result)` | Free a parse result. NULL-safe. |
 | `merve_get_exports_count(result)` | Number of named exports found. |
@@ -197,6 +225,9 @@ Found 2 exports:
 | `merve_get_last_error()` | Last error code (`MERVE_ERROR_*`), or -1 if no error. |
 | `merve_get_version()` | Version string (e.g. `"1.0.1"`). |
 | `merve_get_version_components()` | Version as `{major, minor, revision}`. |
+
+Build with `-DMERVE_ENABLE_ERROR_LOCATION=ON` to enable non-zero locations
+from `merve_parse_commonjs_ex`.
 
 #### Error Constants
 
@@ -344,6 +375,7 @@ ctest --test-dir build
 | `MERVE_TESTING` | `ON` | Build test suite |
 | `MERVE_BENCHMARKS` | `OFF` | Build benchmarks |
 | `MERVE_USE_SIMDUTF` | `OFF` | Use simdutf for optimized string operations |
+| `MERVE_ENABLE_ERROR_LOCATION` | `OFF` | Track parse error source locations |
 | `MERVE_SANITIZE` | `OFF` | Enable address sanitizer |
 
 ### Building with simdutf

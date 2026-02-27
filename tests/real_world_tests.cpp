@@ -980,6 +980,41 @@ TEST(real_world_tests, esm_syntax_error_import_meta) {
   ASSERT_EQ(err, lexer::lexer_error::UNEXPECTED_ESM_IMPORT_META);
 }
 
+TEST(real_world_tests, eof_unterminated_brace_error) {
+  auto result = lexer::parse_commonjs("(function test() {");
+  ASSERT_FALSE(result.has_value());
+  auto err = lexer::get_last_error();
+  ASSERT_TRUE(err.has_value());
+  ASSERT_EQ(err, lexer::lexer_error::UNTERMINATED_BRACE);
+}
+
+TEST(real_world_tests, eof_unterminated_paren_error) {
+  auto result = lexer::parse_commonjs("(a + b");
+  ASSERT_FALSE(result.has_value());
+  auto err = lexer::get_last_error();
+  ASSERT_TRUE(err.has_value());
+  ASSERT_EQ(err, lexer::lexer_error::UNTERMINATED_PAREN);
+}
+
+TEST(real_world_tests, error_location_state_resets_after_success) {
+  auto failed = lexer::parse_commonjs("\n  import 'x';");
+  ASSERT_FALSE(failed.has_value());
+
+  auto loc_after_error = lexer::get_last_error_location();
+#if defined(MERVE_ENABLE_ERROR_LOCATION)
+  ASSERT_TRUE(loc_after_error.has_value());
+  ASSERT_EQ(loc_after_error->line, 2u);
+  ASSERT_EQ(loc_after_error->column, 3u);
+  ASSERT_EQ(loc_after_error->offset, 3u);
+#else
+  ASSERT_FALSE(loc_after_error.has_value());
+#endif
+
+  auto ok = lexer::parse_commonjs("exports.ok = 1;");
+  ASSERT_TRUE(ok.has_value());
+  ASSERT_FALSE(lexer::get_last_error_location().has_value());
+}
+
 TEST(real_world_tests, unicode_escape_sequences) {
   // Test various unicode escape sequences in exports
   auto result = lexer::parse_commonjs("\
