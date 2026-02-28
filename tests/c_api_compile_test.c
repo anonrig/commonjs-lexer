@@ -23,6 +23,15 @@ static void check_types(void) {
   merve_analysis a = (merve_analysis)0;
   (void)a;
 
+  merve_error_loc loc;
+  loc.line = 0;
+  loc.column = 0;
+  (void)loc;
+
+  merve_analysis (*parse_fn)(const char*, size_t, merve_error_loc*) =
+      &merve_parse_commonjs;
+  (void)parse_fn;
+
   /* Verify the error constants are valid integer constant expressions. */
   int errors[] = {
       MERVE_ERROR_TODO,

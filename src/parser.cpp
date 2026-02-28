@@ -312,6 +312,40 @@ struct StarExportBinding {
 
 // Thread-local state for error tracking (safe for concurrent parse calls).
 thread_local std::optional<lexer_error> last_error;
+thread_local std::optional<error_location> last_error_location;
+
+static error_location makeErrorLocation(const char* source, const char* end, const char* at) {
+  const char* target = at;
+  if (target < source) target = source;
+  if (target > end) target = end;
+
+  uint32_t line = 1;
+  uint32_t column = 1;
+  const char* cur = source;
+
+  while (cur < target) {
+    const char ch = *cur++;
+    if (ch == '\n') {
+      line++;
+      column = 1;
+      continue;
+    }
+    if (ch == '\r') {
+      line++;
+      column = 1;
+      if (cur < target && *cur == '\n') {
+        cur++;
+      }
+      continue;
+    }
+    column++;
+  }
+
+  error_location loc{};
+  loc.line = line;
+  loc.column = column;
+  return loc;
+}
 
 // Lexer state class
 class CJSLexer {
@@ -332,6 +366,7 @@ private:
 
   std::array<uint16_t, STACK_DEPTH> templateStack_;
   std::array<const char*, STACK_DEPTH> openTokenPosStack_;
+  std::array<char, STACK_DEPTH> openTokenTypeStack_;
   std::array<bool, STACK_DEPTH> openClassPosStack;
   std::array<StarExportBinding, MAX_STAR_EXPORTS> starExportStack_;
   StarExportBinding* starExportStack;
@@ -483,9 +518,11 @@ private:
   }
 
   // Parsing utilities
-  void syntaxError(lexer_error code) {
+  void syntaxError(lexer_error code, const char* at = nullptr) {
     if (!last_error) {
       last_error = code;
+      const char* error_pos = at ? at : pos;
+      last_error_location = makeErrorLocation(source, end, error_pos);
     }
     pos = end + 1;
   }
@@ -1488,6 +1525,7 @@ private:
     char ch = commentWhitespace();
     switch (ch) {
       case '(':
+        openTokenTypeStack_[openTokenDepth] = '(';
         openTokenPosStack_[openTokenDepth++] = startPos;
         return;
       case '.':
@@ -1501,7 +1539,7 @@ private:
             // It's something like import.metaData, not import.meta
             return;
           }
-          syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT_META);
+          syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT_META, startPos);
         }
         return;
       default:
@@ -1516,17 +1554,18 @@ private:
           pos--;
           return;
         }
-        syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT);
+        syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT, startPos);
     }
   }
 
   void throwIfExportStatement() {
+    const char* startPos = pos;
     pos += 6;
     const char* curPos = pos;
     char ch = commentWhitespace();
     if (pos == curPos && !isPunctuator(ch))
       return;
-    syntaxError(lexer_error::UNEXPECTED_ESM_EXPORT);
+    syntaxError(lexer_error::UNEXPECTED_ESM_EXPORT, startPos);
   }
 
 public:
@@ -1535,7 +1574,7 @@ public:
       templateStackDepth(0), openTokenDepth(0), templateDepth(0),
       line(1),
       lastSlashWasDivision(false), nextBraceIsClass(false),
-      templateStack_{}, openTokenPosStack_{}, openClassPosStack{},
+      templateStack_{}, openTokenPosStack_{}, openTokenTypeStack_{}, openClassPosStack{},
       starExportStack_{}, starExportStack(nullptr), STAR_EXPORT_STACK_END(nullptr),
       exports(out_exports), re_exports(out_re_exports) {}
 
@@ -1600,6 +1639,7 @@ public:
               pos += 23;
               if (*pos == '(') {
                 pos++;
+                openTokenTypeStack_[openTokenDepth] = '(';
                 openTokenPosStack_[openTokenDepth++] = lastTokenPos;
                 if (tryParseRequire(RequireType::Import) && keywordStart(startPos))
                   tryBacktrackAddStarExportBinding(startPos - 1);
@@ -1609,6 +1649,7 @@ public:
               if (pos + 4 < end && matchesAt(pos, end, "Star"))
                 pos += 4;
               if (*pos == '(') {
+                openTokenTypeStack_[openTokenDepth] = '(';
                 openTokenPosStack_[openTokenDepth++] = lastTokenPos;
                 if (*(pos + 1) == 'r') {
                   pos++;
@@ -1643,6 +1684,7 @@ public:
             tryParseObjectDefineOrKeys(openTokenDepth == 0);
           break;
         case '(':
+          openTokenTypeStack_[openTokenDepth] = '(';
           openTokenPosStack_[openTokenDepth++] = lastTokenPos;
           break;
         case ')':
@@ -1655,6 +1697,7 @@ public:
         case '{':
           openClassPosStack[openTokenDepth] = nextBraceIsClass;
           nextBraceIsClass = false;
+          openTokenTypeStack_[openTokenDepth] = '{';
           openTokenPosStack_[openTokenDepth++] = lastTokenPos;
           break;
         case '}':
@@ -1717,6 +1760,19 @@ public:
       lastTokenPos = pos;
     }
 
+    if (!last_error) {
+      if (templateDepth != std::numeric_limits<uint16_t>::max()) {
+        syntaxError(lexer_error::UNTERMINATED_TEMPLATE_STRING, end);
+      } else if (openTokenDepth != 0) {
+        const char open_ch = openTokenTypeStack_[openTokenDepth - 1];
+        if (open_ch == '{') {
+          syntaxError(lexer_error::UNTERMINATED_BRACE, end);
+        } else {
+          syntaxError(lexer_error::UNTERMINATED_PAREN, end);
+        }
+      }
+    }
+
     if (templateDepth != std::numeric_limits<uint16_t>::max() || openTokenDepth || last_error) {
       return false;
     }
@@ -1727,6 +1783,7 @@ public:
 
 std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents) {
   last_error.reset();
+  last_error_location.reset();
 
   lexer_analysis result;
   CJSLexer lexer(result.exports, result.re_exports);
@@ -1740,6 +1797,10 @@ std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents) {
 
 const std::optional<lexer_error>& get_last_error() {
   return last_error;
+}
+
+const std::optional<error_location>& get_last_error_location() {
+  return last_error_location;
 }
 
 }  // namespace lexer

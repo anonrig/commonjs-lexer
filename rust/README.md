@@ -51,7 +51,7 @@ merve = { version = "...", features = ["libcpp"] }
 ### `parse_commonjs`
 
 ```rust
-pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError>
+pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LocatedLexerError>
 ```
 
 Parse CommonJS source code and extract export information. The returned
@@ -99,6 +99,17 @@ Returned when the input contains ESM syntax or malformed constructs:
 | `TemplateNestOverflow` | Template literal nesting too deep |
 
 `LexerError` implements `Display` and, with the `std` feature, `std::error::Error`.
+
+### `LocatedLexerError`
+
+```rust
+pub struct LocatedLexerError {
+    pub kind: LexerError,
+    pub location: Option<ErrorLocation>,
+}
+```
+
+`ErrorLocation` uses 1-based `line`/`column` (byte-oriented column).
 
 ### Versioning helpers
 

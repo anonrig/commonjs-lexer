@@ -112,6 +112,66 @@ impl fmt::Display for LexerError {
 #[cfg(feature = "std")]
 impl std::error::Error for LexerError {}
 
+/// 1-based error position.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ErrorLocation {
+    /// 1-based line number.
+    pub line: NonZeroU32,
+    /// 1-based column number (byte-oriented).
+    pub column: NonZeroU32,
+}
+
+impl ErrorLocation {
+    #[inline]
+    fn from_ffi(loc: ffi::merve_error_loc) -> Option<Self> {
+        Some(Self {
+            line: NonZeroU32::new(loc.line)?,
+            column: NonZeroU32::new(loc.column)?,
+        })
+    }
+}
+
+/// Lexer error with optional source location.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct LocatedLexerError {
+    /// Error kind reported by the lexer.
+    pub kind: LexerError,
+    /// Source location, if available.
+    pub location: Option<ErrorLocation>,
+}
+
+impl LocatedLexerError {
+    #[inline]
+    fn from_code_and_loc(code: i32, loc: ffi::merve_error_loc) -> Self {
+        let kind = if code >= 0 {
+            LexerError::from_code(code)
+        } else {
+            LexerError::Unknown(code)
+        };
+        Self {
+            kind,
+            location: ErrorLocation::from_ffi(loc),
+        }
+    }
+}
+
+impl fmt::Display for LocatedLexerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(loc) = self.location {
+            write!(
+                f,
+                "{} at line {}, column {}",
+                self.kind, loc.line, loc.column
+            )
+        } else {
+            write!(f, "{}", self.kind)
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for LocatedLexerError {}
+
 /// A parsed CommonJS analysis result.
 ///
 /// The lifetime `'a` is tied to the source string passed to [`parse_commonjs`],
@@ -317,7 +377,7 @@ impl ExactSizeIterator for ExportIter<'_, '_> {}
 ///
 /// # Errors
 ///
-/// Returns a [`LexerError`] if the input contains ESM syntax or other
+/// Returns a [`LocatedLexerError`] if the input contains ESM syntax or other
 /// unsupported constructs.
 ///
 /// # Examples
@@ -346,30 +406,33 @@ impl ExactSizeIterator for ExportIter<'_, '_> {}
 ///     let _ = leaked;
 /// }
 /// ```
-pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError> {
+pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LocatedLexerError> {
     if source.is_empty() {
-        return Err(LexerError::EmptySource);
-    }
-    let handle = unsafe { ffi::merve_parse_commonjs(source.as_ptr().cast(), source.len()) };
-    if handle.is_null() {
-        // NULL means allocation failure; map to a generic error
-        let code = unsafe { ffi::merve_get_last_error() };
-        return Err(if code >= 0 {
-            LexerError::from_code(code)
-        } else {
-            LexerError::Unknown(code)
+        return Err(LocatedLexerError {
+            kind: LexerError::EmptySource,
+            location: Some(ErrorLocation {
+                line: NonZeroU32::new(1).expect("1 is non-zero"),
+                column: NonZeroU32::new(1).expect("1 is non-zero"),
+            }),
         });
     }
+
+    let mut loc = ffi::merve_error_loc { line: 0, column: 0 };
+
+    let handle =
+        unsafe { ffi::merve_parse_commonjs(source.as_ptr().cast(), source.len(), &mut loc) };
+    if handle.is_null() {
+        let code = unsafe { ffi::merve_get_last_error() };
+        return Err(LocatedLexerError::from_code_and_loc(code, loc));
+    }
+
     if !unsafe { ffi::merve_is_valid(handle) } {
         let code = unsafe { ffi::merve_get_last_error() };
-        let err = if code >= 0 {
-            LexerError::from_code(code)
-        } else {
-            LexerError::Unknown(code)
-        };
+        let err = LocatedLexerError::from_code_and_loc(code, loc);
         unsafe { ffi::merve_free(handle) };
         return Err(err);
     }
+
     Ok(Analysis {
         handle,
         _source: PhantomData,
@@ -455,7 +518,7 @@ mod tests {
         let result = parse_commonjs(source);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert_eq!(err, LexerError::UnexpectedEsmImport);
+        assert_eq!(err.kind, LexerError::UnexpectedEsmImport);
     }
 
     #[test]
@@ -464,14 +527,69 @@ mod tests {
         let result = parse_commonjs(source);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert_eq!(err, LexerError::UnexpectedEsmExport);
+        assert_eq!(err.kind, LexerError::UnexpectedEsmExport);
     }
 
     #[test]
     fn empty_input() {
         let result = parse_commonjs("");
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), LexerError::EmptySource);
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, LexerError::EmptySource);
+        let loc = err
+            .location
+            .expect("empty source location should be present");
+        assert_eq!(loc.line, NonZeroU32::new(1).unwrap());
+        assert_eq!(loc.column, NonZeroU32::new(1).unwrap());
+    }
+
+    #[test]
+    fn parse_reports_error_position() {
+        let source = "\n  import 'x';";
+        let result = parse_commonjs(source);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, LexerError::UnexpectedEsmImport);
+        let loc = err.location.expect("location should be present");
+        assert_eq!(loc.line, NonZeroU32::new(2).unwrap());
+        assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
+    }
+
+    #[test]
+    fn parse_crlf_position() {
+        let source = "\r\n  import 'x';";
+        let result = parse_commonjs(source);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, LexerError::UnexpectedEsmImport);
+        let loc = err.location.expect("location should be present");
+        assert_eq!(loc.line, NonZeroU32::new(2).unwrap());
+        assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
+    }
+
+    #[test]
+    fn parse_import_meta_and_eof() {
+        let import_meta = parse_commonjs("\n  import.meta.url");
+        assert!(import_meta.is_err());
+        let import_meta_err = import_meta.unwrap_err();
+        assert_eq!(import_meta_err.kind, LexerError::UnexpectedEsmImportMeta);
+        let import_meta_loc = import_meta_err
+            .location
+            .expect("import.meta location should be present");
+        assert_eq!(import_meta_loc.line, NonZeroU32::new(2).unwrap());
+        assert_eq!(import_meta_loc.column, NonZeroU32::new(3).unwrap());
+
+        let eof = parse_commonjs("(a + b");
+        assert!(eof.is_err());
+        let eof_err = eof.unwrap_err();
+        assert_eq!(eof_err.kind, LexerError::UnterminatedParen);
+        let eof_loc = eof_err
+            .location
+            .expect("unterminated paren location should be present");
+        assert_eq!(eof_loc.line, NonZeroU32::new(1).unwrap());
+        assert_eq!(eof_loc.column, NonZeroU32::new(7).unwrap());
     }
 
     #[test]
@@ -558,6 +676,22 @@ mod tests {
         assert!(s.contains("99"), "got: {s}");
     }
 
+    #[cfg(feature = "std")]
+    #[test]
+    fn located_error_display_includes_location() {
+        let err = LocatedLexerError {
+            kind: LexerError::UnexpectedEsmImport,
+            location: Some(ErrorLocation {
+                line: NonZeroU32::new(2).unwrap(),
+                column: NonZeroU32::new(4).unwrap(),
+            }),
+        };
+        let s = format!("{err}");
+        assert!(s.contains("line 2"), "got: {s}");
+        assert!(s.contains("column 4"), "got: {s}");
+        assert!(!s.contains("offset"), "got: {s}");
+    }
+
     #[test]
     fn error_from_code_roundtrip() {
         for code in 0..=12 {
@@ -572,6 +706,13 @@ mod tests {
     fn error_is_std_error() {
         fn assert_error<E: std::error::Error>() {}
         assert_error::<LexerError>();
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn located_error_is_std_error() {
+        fn assert_error<E: std::error::Error>() {}
+        assert_error::<LocatedLexerError>();
     }
 
     #[test]

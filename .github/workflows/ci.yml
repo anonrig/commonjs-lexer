@@ -168,6 +168,7 @@ jobs:
         working-directory: rust
         run: cargo test
 
+
       - name: Test (no default features)
         working-directory: rust
         run: cargo test --no-default-features

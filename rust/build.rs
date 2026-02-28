@@ -133,8 +133,8 @@ fn amalgamate_file(
     out.push_str(&format!("/* end file {filename} */\n"));
 }
 
-/// When building inside the merve repository, produce the three amalgamated
-/// files in `deps/`:  merve.h, merve.cpp, merve_c.h.
+/// When building inside the merve repository, produce the vendored
+/// sources in `deps/`: merve.h, merve.cpp, merve_c.cpp, merve_c.h.
 fn amalgamate_from_repo(project_root: &Path, deps: &Path) {
     let include_path = project_root.join("include");
     let source_path = project_root.join("src");
@@ -159,21 +159,23 @@ fn amalgamate_from_repo(project_root: &Path, deps: &Path) {
     );
     fs::write(deps.join("merve.h"), &header).expect("failed to write deps/merve.h");
 
-    // 2. Amalgamate merve.cpp (parser.cpp + merve_c.cpp with includes resolved).
+    // 2. Amalgamate merve.cpp (parser.cpp with includes resolved).
     let mut source = String::from("#include \"merve.h\"\n\n");
-    for cpp in &["parser.cpp", "merve_c.cpp"] {
-        amalgamate_file(
-            &include_path,
-            &source_path,
-            &source_path,
-            cpp,
-            &mut source,
-            &mut included,
-        );
-    }
+    amalgamate_file(
+        &include_path,
+        &source_path,
+        &source_path,
+        "parser.cpp",
+        &mut source,
+        &mut included,
+    );
     fs::write(deps.join("merve.cpp"), &source).expect("failed to write deps/merve.cpp");
 
-    // 3. Copy merve_c.h verbatim (standalone C header).
+    // 3. Copy merve_c.cpp verbatim (C API implementation).
+    fs::copy(source_path.join("merve_c.cpp"), deps.join("merve_c.cpp"))
+        .expect("failed to copy merve_c.cpp");
+
+    // 4. Copy merve_c.h verbatim (standalone C header).
     fs::copy(include_path.join("merve_c.h"), deps.join("merve_c.h"))
         .expect("failed to copy merve_c.h");
 }
@@ -207,15 +209,17 @@ fn main() {
         }
     }
 
-    // Both in-repo and published crate use the same layout: merve.cpp + merve.h + merve_c.h
+    // Both in-repo and published crate use the same layout:
+    // merve.cpp + merve_c.cpp + merve.h + merve_c.h
     assert!(
-        deps.join("merve.cpp").exists(),
+        deps.join("merve.cpp").exists() && deps.join("merve_c.cpp").exists(),
         "No C++ sources found in deps/. \
-         When building outside the repository, deps/ must contain the amalgamated sources."
+         When building outside the repository, deps/ must contain the vendored sources."
     );
 
     let mut build = cc::Build::new();
     build.file(deps.join("merve.cpp"));
+    build.file(deps.join("merve_c.cpp"));
     build.include(&deps);
     build.cpp(true).std("c++20").warnings(false);
 

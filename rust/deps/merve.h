@@ -29,6 +29,7 @@ enum {
 #endif  // MERVE_VERSION_H
 /* end file merve/version.h */
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -61,6 +62,17 @@ enum lexer_error {
 
   // Resource limit errors
   TEMPLATE_NEST_OVERFLOW, ///< Template literal nesting too deep
+};
+
+/**
+ * @brief Source location information for a parse error.
+ *
+ * - line and column are 1-based.
+ * - column is byte-oriented.
+ */
+struct error_location {
+  uint32_t line;
+  uint32_t column;
 };
 
 /**
@@ -171,6 +183,18 @@ std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents);
  *       to parse_commonjs().
  */
 const std::optional<lexer_error>& get_last_error();
+
+/**
+ * @brief Get the location of the last failed parse operation.
+ *
+ * @return const std::optional<error_location>& The last error location, or
+ *         std::nullopt if unavailable.
+ *
+ * @note This is global state and may be overwritten by subsequent calls
+ *       to parse_commonjs().
+ * @note Location tracking is best-effort and may be unavailable.
+ */
+const std::optional<error_location>& get_last_error_location();
 
 }  // namespace lexer
 

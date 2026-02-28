@@ -25,8 +25,18 @@ pub struct merve_version_components {
     pub revision: c_int,
 }
 
+#[repr(C)]
+pub struct merve_error_loc {
+    pub line: u32,
+    pub column: u32,
+}
+
 unsafe extern "C" {
-    pub fn merve_parse_commonjs(input: *const c_char, length: usize) -> merve_analysis;
+    pub fn merve_parse_commonjs(
+        input: *const c_char,
+        length: usize,
+        out_err: *mut merve_error_loc,
+    ) -> merve_analysis;
     pub fn merve_is_valid(result: merve_analysis) -> bool;
     pub fn merve_free(result: merve_analysis);
     pub fn merve_get_exports_count(result: merve_analysis) -> usize;

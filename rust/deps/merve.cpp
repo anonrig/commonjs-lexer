@@ -314,6 +314,40 @@ struct StarExportBinding {
 
 // Thread-local state for error tracking (safe for concurrent parse calls).
 thread_local std::optional<lexer_error> last_error;
+thread_local std::optional<error_location> last_error_location;
+
+static error_location makeErrorLocation(const char* source, const char* end, const char* at) {
+  const char* target = at;
+  if (target < source) target = source;
+  if (target > end) target = end;
+
+  uint32_t line = 1;
+  uint32_t column = 1;
+  const char* cur = source;
+
+  while (cur < target) {
+    const char ch = *cur++;
+    if (ch == '\n') {
+      line++;
+      column = 1;
+      continue;
+    }
+    if (ch == '\r') {
+      line++;
+      column = 1;
+      if (cur < target && *cur == '\n') {
+        cur++;
+      }
+      continue;
+    }
+    column++;
+  }
+
+  error_location loc{};
+  loc.line = line;
+  loc.column = column;
+  return loc;
+}
 
 // Lexer state class
 class CJSLexer {
@@ -334,6 +368,7 @@ private:
 
   std::array<uint16_t, STACK_DEPTH> templateStack_;
   std::array<const char*, STACK_DEPTH> openTokenPosStack_;
+  std::array<char, STACK_DEPTH> openTokenTypeStack_;
   std::array<bool, STACK_DEPTH> openClassPosStack;
   std::array<StarExportBinding, MAX_STAR_EXPORTS> starExportStack_;
   StarExportBinding* starExportStack;
@@ -485,9 +520,11 @@ private:
   }
 
   // Parsing utilities
-  void syntaxError(lexer_error code) {
+  void syntaxError(lexer_error code, const char* at = nullptr) {
     if (!last_error) {
       last_error = code;
+      const char* error_pos = at ? at : pos;
+      last_error_location = makeErrorLocation(source, end, error_pos);
     }
     pos = end + 1;
   }
@@ -1490,6 +1527,7 @@ private:
     char ch = commentWhitespace();
     switch (ch) {
       case '(':
+        openTokenTypeStack_[openTokenDepth] = '(';
         openTokenPosStack_[openTokenDepth++] = startPos;
         return;
       case '.':
@@ -1503,7 +1541,7 @@ private:
             // It's something like import.metaData, not import.meta
             return;
           }
-          syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT_META);
+          syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT_META, startPos);
         }
         return;
       default:
@@ -1518,17 +1556,18 @@ private:
           pos--;
           return;
         }
-        syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT);
+        syntaxError(lexer_error::UNEXPECTED_ESM_IMPORT, startPos);
     }
   }
 
   void throwIfExportStatement() {
+    const char* startPos = pos;
     pos += 6;
     const char* curPos = pos;
     char ch = commentWhitespace();
     if (pos == curPos && !isPunctuator(ch))
       return;
-    syntaxError(lexer_error::UNEXPECTED_ESM_EXPORT);
+    syntaxError(lexer_error::UNEXPECTED_ESM_EXPORT, startPos);
   }
 
 public:
@@ -1537,7 +1576,7 @@ public:
       templateStackDepth(0), openTokenDepth(0), templateDepth(0),
       line(1),
       lastSlashWasDivision(false), nextBraceIsClass(false),
-      templateStack_{}, openTokenPosStack_{}, openClassPosStack{},
+      templateStack_{}, openTokenPosStack_{}, openTokenTypeStack_{}, openClassPosStack{},
       starExportStack_{}, starExportStack(nullptr), STAR_EXPORT_STACK_END(nullptr),
       exports(out_exports), re_exports(out_re_exports) {}
 
@@ -1602,6 +1641,7 @@ public:
               pos += 23;
               if (*pos == '(') {
                 pos++;
+                openTokenTypeStack_[openTokenDepth] = '(';
                 openTokenPosStack_[openTokenDepth++] = lastTokenPos;
                 if (tryParseRequire(RequireType::Import) && keywordStart(startPos))
                   tryBacktrackAddStarExportBinding(startPos - 1);
@@ -1611,6 +1651,7 @@ public:
               if (pos + 4 < end && matchesAt(pos, end, "Star"))
                 pos += 4;
               if (*pos == '(') {
+                openTokenTypeStack_[openTokenDepth] = '(';
                 openTokenPosStack_[openTokenDepth++] = lastTokenPos;
                 if (*(pos + 1) == 'r') {
                   pos++;
@@ -1645,6 +1686,7 @@ public:
             tryParseObjectDefineOrKeys(openTokenDepth == 0);
           break;
         case '(':
+          openTokenTypeStack_[openTokenDepth] = '(';
           openTokenPosStack_[openTokenDepth++] = lastTokenPos;
           break;
         case ')':
@@ -1657,6 +1699,7 @@ public:
         case '{':
           openClassPosStack[openTokenDepth] = nextBraceIsClass;
           nextBraceIsClass = false;
+          openTokenTypeStack_[openTokenDepth] = '{';
           openTokenPosStack_[openTokenDepth++] = lastTokenPos;
           break;
         case '}':
@@ -1719,6 +1762,19 @@ public:
       lastTokenPos = pos;
     }
 
+    if (!last_error) {
+      if (templateDepth != std::numeric_limits<uint16_t>::max()) {
+        syntaxError(lexer_error::UNTERMINATED_TEMPLATE_STRING, end);
+      } else if (openTokenDepth != 0) {
+        const char open_ch = openTokenTypeStack_[openTokenDepth - 1];
+        if (open_ch == '{') {
+          syntaxError(lexer_error::UNTERMINATED_BRACE, end);
+        } else {
+          syntaxError(lexer_error::UNTERMINATED_PAREN, end);
+        }
+      }
+    }
+
     if (templateDepth != std::numeric_limits<uint16_t>::max() || openTokenDepth || last_error) {
       return false;
     }
@@ -1729,6 +1785,7 @@ public:
 
 std::optional<lexer_analysis> parse_commonjs(std::string_view file_contents) {
   last_error.reset();
+  last_error_location.reset();
 
   lexer_analysis result;
   CJSLexer lexer(result.exports, result.re_exports);
@@ -1744,293 +1801,9 @@ const std::optional<lexer_error>& get_last_error() {
   return last_error;
 }
 
+const std::optional<error_location>& get_last_error_location() {
+  return last_error_location;
+}
+
 }  // namespace lexer
 /* end file parser.cpp */
-/* begin file merve_c.cpp */
-/* begin file merve.h */
-#ifndef MERVE_H
-#define MERVE_H
-
-
-#endif  // MERVE_H
-/* end file merve.h */
-/* begin file merve_c.h */
-/**
- * @file merve_c.h
- * @brief Includes the C definitions for merve. This is a C file, not C++.
- */
-#ifndef MERVE_C_H
-#define MERVE_C_H
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-/**
- * @brief Non-owning string reference.
- *
- * The data pointer is NOT null-terminated. Always use the length field.
- *
- * The data is valid as long as:
- * - The merve_analysis handle that produced it has not been freed.
- * - For string_view-backed exports: the original source buffer is alive.
- */
-typedef struct {
-  const char* data;
-  size_t length;
-} merve_string;
-
-/**
- * @brief Opaque handle to a CommonJS parse result.
- *
- * Created by merve_parse_commonjs(). Must be freed with merve_free().
- */
-typedef void* merve_analysis;
-
-/**
- * @brief Version number components.
- */
-typedef struct {
-  int major;
-  int minor;
-  int revision;
-} merve_version_components;
-
-/* Error codes corresponding to lexer::lexer_error values. */
-#define MERVE_ERROR_TODO 0
-#define MERVE_ERROR_UNEXPECTED_PAREN 1
-#define MERVE_ERROR_UNEXPECTED_BRACE 2
-#define MERVE_ERROR_UNTERMINATED_PAREN 3
-#define MERVE_ERROR_UNTERMINATED_BRACE 4
-#define MERVE_ERROR_UNTERMINATED_TEMPLATE_STRING 5
-#define MERVE_ERROR_UNTERMINATED_STRING_LITERAL 6
-#define MERVE_ERROR_UNTERMINATED_REGEX_CHARACTER_CLASS 7
-#define MERVE_ERROR_UNTERMINATED_REGEX 8
-#define MERVE_ERROR_UNEXPECTED_ESM_IMPORT_META 9
-#define MERVE_ERROR_UNEXPECTED_ESM_IMPORT 10
-#define MERVE_ERROR_UNEXPECTED_ESM_EXPORT 11
-#define MERVE_ERROR_TEMPLATE_NEST_OVERFLOW 12
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * Parse CommonJS source code and extract export information.
- *
- * The source buffer must remain valid while accessing string_view-backed
- * export names from the returned handle.
- *
- * You must call merve_free() on the returned handle when done.
- *
- * @param input  Pointer to the JavaScript source (need not be null-terminated).
- *               NULL is treated as an empty string.
- * @param length Length of the input in bytes.
- * @return A handle to the parse result, or NULL on out-of-memory.
- *         Use merve_is_valid() to check if parsing succeeded.
- */
-merve_analysis merve_parse_commonjs(const char* input, size_t length);
-
-/**
- * Check whether the parse result is valid (parsing succeeded).
- *
- * @param result Handle returned by merve_parse_commonjs(). NULL returns false.
- * @return true if parsing succeeded, false otherwise.
- */
-bool merve_is_valid(merve_analysis result);
-
-/**
- * Free a parse result and all associated memory.
- *
- * @param result Handle returned by merve_parse_commonjs(). NULL is a no-op.
- */
-void merve_free(merve_analysis result);
-
-/**
- * Get the number of named exports found.
- *
- * @param result A parse result handle. NULL returns 0.
- * @return Number of exports, or 0 if result is NULL or invalid.
- */
-size_t merve_get_exports_count(merve_analysis result);
-
-/**
- * Get the number of re-export module specifiers found.
- *
- * @param result A parse result handle. NULL returns 0.
- * @return Number of re-exports, or 0 if result is NULL or invalid.
- */
-size_t merve_get_reexports_count(merve_analysis result);
-
-/**
- * Get the name of an export at the given index.
- *
- * @param result A valid parse result handle.
- * @param index  Zero-based index (must be < merve_get_exports_count()).
- * @return Non-owning string reference. Returns {NULL, 0} on error.
- */
-merve_string merve_get_export_name(merve_analysis result, size_t index);
-
-/**
- * Get the 1-based source line number of an export.
- *
- * @param result A valid parse result handle.
- * @param index  Zero-based index (must be < merve_get_exports_count()).
- * @return 1-based line number, or 0 on error.
- */
-uint32_t merve_get_export_line(merve_analysis result, size_t index);
-
-/**
- * Get the module specifier of a re-export at the given index.
- *
- * @param result A valid parse result handle.
- * @param index  Zero-based index (must be < merve_get_reexports_count()).
- * @return Non-owning string reference. Returns {NULL, 0} on error.
- */
-merve_string merve_get_reexport_name(merve_analysis result, size_t index);
-
-/**
- * Get the 1-based source line number of a re-export.
- *
- * @param result A valid parse result handle.
- * @param index  Zero-based index (must be < merve_get_reexports_count()).
- * @return 1-based line number, or 0 on error.
- */
-uint32_t merve_get_reexport_line(merve_analysis result, size_t index);
-
-/**
- * Get the error code from the last merve_parse_commonjs() call.
- *
- * @return One of the MERVE_ERROR_* constants, or -1 if the last parse
- *         succeeded.
- * @note This is global state, overwritten by each merve_parse_commonjs() call.
- */
-int merve_get_last_error(void);
-
-/**
- * Get the merve library version string.
- *
- * @return Null-terminated version string (e.g. "1.0.1"). Never NULL.
- */
-const char* merve_get_version(void);
-
-/**
- * Get the merve library version as individual components.
- *
- * @return Struct with major, minor, and revision fields.
- */
-merve_version_components merve_get_version_components(void);
-
-#ifdef __cplusplus
-}  /* extern "C" */
-#endif
-
-#endif /* MERVE_C_H */
-/* end file merve_c.h */
-
-#include <new>
-
-struct merve_analysis_impl {
-  std::optional<lexer::lexer_analysis> result{};
-};
-
-static merve_string merve_string_create(const char* data, size_t length) {
-  merve_string out{};
-  out.data = data;
-  out.length = length;
-  return out;
-}
-
-extern "C" {
-
-merve_analysis merve_parse_commonjs(const char* input, size_t length) {
-  merve_analysis_impl* impl = new (std::nothrow) merve_analysis_impl();
-  if (!impl) return nullptr;
-  if (input != nullptr) {
-    impl->result = lexer::parse_commonjs(std::string_view(input, length));
-  } else {
-    impl->result = lexer::parse_commonjs(std::string_view("", 0));
-  }
-  return static_cast<merve_analysis>(impl);
-}
-
-bool merve_is_valid(merve_analysis result) {
-  if (!result) return false;
-  return static_cast<merve_analysis_impl*>(result)->result.has_value();
-}
-
-void merve_free(merve_analysis result) {
-  if (!result) return;
-  delete static_cast<merve_analysis_impl*>(result);
-}
-
-size_t merve_get_exports_count(merve_analysis result) {
-  if (!result) return 0;
-  merve_analysis_impl* impl = static_cast<merve_analysis_impl*>(result);
-  if (!impl->result.has_value()) return 0;
-  return impl->result->exports.size();
-}
-
-size_t merve_get_reexports_count(merve_analysis result) {
-  if (!result) return 0;
-  merve_analysis_impl* impl = static_cast<merve_analysis_impl*>(result);
-  if (!impl->result.has_value()) return 0;
-  return impl->result->re_exports.size();
-}
-
-merve_string merve_get_export_name(merve_analysis result, size_t index) {
-  if (!result) return merve_string_create(nullptr, 0);
-  merve_analysis_impl* impl = static_cast<merve_analysis_impl*>(result);
-  if (!impl->result.has_value()) return merve_string_create(nullptr, 0);
-  if (index >= impl->result->exports.size())
-    return merve_string_create(nullptr, 0);
-  std::string_view sv =
-      lexer::get_string_view(impl->result->exports[index]);
-  return merve_string_create(sv.data(), sv.size());
-}
-
-uint32_t merve_get_export_line(merve_analysis result, size_t index) {
-  if (!result) return 0;
-  merve_analysis_impl* impl = static_cast<merve_analysis_impl*>(result);
-  if (!impl->result.has_value()) return 0;
-  if (index >= impl->result->exports.size()) return 0;
-  return impl->result->exports[index].line;
-}
-
-merve_string merve_get_reexport_name(merve_analysis result, size_t index) {
-  if (!result) return merve_string_create(nullptr, 0);
-  merve_analysis_impl* impl = static_cast<merve_analysis_impl*>(result);
-  if (!impl->result.has_value()) return merve_string_create(nullptr, 0);
-  if (index >= impl->result->re_exports.size())
-    return merve_string_create(nullptr, 0);
-  std::string_view sv =
-      lexer::get_string_view(impl->result->re_exports[index]);
-  return merve_string_create(sv.data(), sv.size());
-}
-
-uint32_t merve_get_reexport_line(merve_analysis result, size_t index) {
-  if (!result) return 0;
-  merve_analysis_impl* impl = static_cast<merve_analysis_impl*>(result);
-  if (!impl->result.has_value()) return 0;
-  if (index >= impl->result->re_exports.size()) return 0;
-  return impl->result->re_exports[index].line;
-}
-
-int merve_get_last_error(void) {
-  const std::optional<lexer::lexer_error>& err = lexer::get_last_error();
-  if (!err.has_value()) return -1;
-  return static_cast<int>(err.value());
-}
-
-const char* merve_get_version(void) { return MERVE_VERSION; }
-
-merve_version_components merve_get_version_components(void) {
-  merve_version_components vc{};
-  vc.major = lexer::MERVE_VERSION_MAJOR;
-  vc.minor = lexer::MERVE_VERSION_MINOR;
-  vc.revision = lexer::MERVE_VERSION_REVISION;
-  return vc;
-}
-
-}  /* extern "C" */
-/* end file merve_c.cpp */
