@@ -1001,13 +1001,9 @@ TEST(real_world_tests, error_location_state_resets_after_success) {
   ASSERT_FALSE(failed.has_value());
 
   auto loc_after_error = lexer::get_last_error_location();
-#if defined(MERVE_ENABLE_ERROR_LOCATION)
   ASSERT_TRUE(loc_after_error.has_value());
   ASSERT_EQ(loc_after_error->line, 2u);
   ASSERT_EQ(loc_after_error->column, 3u);
-#else
-  ASSERT_FALSE(loc_after_error.has_value());
-#endif
 
   auto ok = lexer::parse_commonjs("exports.ok = 1;");
   ASSERT_TRUE(ok.has_value());
@@ -1022,13 +1018,9 @@ TEST(real_world_tests, error_location_crlf_line_counting) {
   ASSERT_EQ(err, lexer::lexer_error::UNEXPECTED_ESM_IMPORT);
 
   auto loc = lexer::get_last_error_location();
-#if defined(MERVE_ENABLE_ERROR_LOCATION)
   ASSERT_TRUE(loc.has_value());
   ASSERT_EQ(loc->line, 2u);
   ASSERT_EQ(loc->column, 3u);
-#else
-  ASSERT_FALSE(loc.has_value());
-#endif
 }
 
 TEST(real_world_tests, error_location_import_meta_and_eof) {
@@ -1038,26 +1030,18 @@ TEST(real_world_tests, error_location_import_meta_and_eof) {
             lexer::lexer_error::UNEXPECTED_ESM_IMPORT_META);
 
   auto import_meta_loc = lexer::get_last_error_location();
-#if defined(MERVE_ENABLE_ERROR_LOCATION)
   ASSERT_TRUE(import_meta_loc.has_value());
   ASSERT_EQ(import_meta_loc->line, 2u);
   ASSERT_EQ(import_meta_loc->column, 3u);
-#else
-  ASSERT_FALSE(import_meta_loc.has_value());
-#endif
 
   auto eof_unterminated = lexer::parse_commonjs("(a + b");
   ASSERT_FALSE(eof_unterminated.has_value());
   ASSERT_EQ(lexer::get_last_error(), lexer::lexer_error::UNTERMINATED_PAREN);
 
   auto eof_loc = lexer::get_last_error_location();
-#if defined(MERVE_ENABLE_ERROR_LOCATION)
   ASSERT_TRUE(eof_loc.has_value());
   ASSERT_EQ(eof_loc->line, 1u);
   ASSERT_EQ(eof_loc->column, 7u);
-#else
-  ASSERT_FALSE(eof_loc.has_value());
-#endif
 }
 
 TEST(real_world_tests, unicode_escape_sequences) {

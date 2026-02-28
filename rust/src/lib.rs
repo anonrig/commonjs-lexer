@@ -113,7 +113,6 @@ impl fmt::Display for LexerError {
 impl std::error::Error for LexerError {}
 
 /// 1-based error position.
-#[cfg(feature = "error-location")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ErrorLocation {
     /// 1-based line number.
@@ -122,7 +121,6 @@ pub struct ErrorLocation {
     pub column: NonZeroU32,
 }
 
-#[cfg(feature = "error-location")]
 impl ErrorLocation {
     #[inline]
     fn from_ffi(loc: ffi::merve_error_loc) -> Option<Self> {
@@ -134,7 +132,6 @@ impl ErrorLocation {
 }
 
 /// Lexer error with optional source location.
-#[cfg(feature = "error-location")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct LocatedLexerError {
     /// Error kind reported by the lexer.
@@ -143,7 +140,6 @@ pub struct LocatedLexerError {
     pub location: Option<ErrorLocation>,
 }
 
-#[cfg(feature = "error-location")]
 impl LocatedLexerError {
     #[inline]
     fn from_code_and_loc(code: i32, loc: ffi::merve_error_loc) -> Self {
@@ -159,7 +155,6 @@ impl LocatedLexerError {
     }
 }
 
-#[cfg(feature = "error-location")]
 impl fmt::Display for LocatedLexerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(loc) = self.location {
@@ -174,7 +169,7 @@ impl fmt::Display for LocatedLexerError {
     }
 }
 
-#[cfg(all(feature = "std", feature = "error-location"))]
+#[cfg(feature = "std")]
 impl std::error::Error for LocatedLexerError {}
 
 /// A parsed CommonJS analysis result.
@@ -385,8 +380,7 @@ impl ExactSizeIterator for ExportIter<'_, '_> {}
 /// Returns a [`LexerError`] if the input contains ESM syntax or other
 /// unsupported constructs.
 ///
-/// Enable the `error-location` feature to use
-/// [`parse_commonjs_with_location`] for location-aware errors.
+/// Use [`parse_commonjs_with_location`] for location-aware errors.
 ///
 /// # Examples
 ///
@@ -418,7 +412,9 @@ pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError> {
     if source.is_empty() {
         return Err(LexerError::EmptySource);
     }
-    let handle = unsafe { ffi::merve_parse_commonjs(source.as_ptr().cast(), source.len()) };
+    let handle = unsafe {
+        ffi::merve_parse_commonjs(source.as_ptr().cast(), source.len(), core::ptr::null_mut())
+    };
     if handle.is_null() {
         // NULL means allocation failure; map to a generic error
         let code = unsafe { ffi::merve_get_last_error() };
@@ -446,13 +442,9 @@ pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError> {
 
 /// Parse CommonJS source and return location-aware errors.
 ///
-/// This API is available with the `error-location` feature.
-///
 /// # Errors
 ///
-/// Returns [`LocatedLexerError`] on parse failure. Location data is optional
-/// and depends on the underlying library build configuration.
-#[cfg(feature = "error-location")]
+/// Returns [`LocatedLexerError`] on parse failure. Location data is optional.
 pub fn parse_commonjs_with_location(source: &str) -> Result<Analysis<'_>, LocatedLexerError> {
     if source.is_empty() {
         return Err(LocatedLexerError {
@@ -467,7 +459,7 @@ pub fn parse_commonjs_with_location(source: &str) -> Result<Analysis<'_>, Locate
     let mut loc = ffi::merve_error_loc { line: 0, column: 0 };
 
     let handle =
-        unsafe { ffi::merve_parse_commonjs_ex(source.as_ptr().cast(), source.len(), &mut loc) };
+        unsafe { ffi::merve_parse_commonjs(source.as_ptr().cast(), source.len(), &mut loc) };
     if handle.is_null() {
         let code = unsafe { ffi::merve_get_last_error() };
         return Err(LocatedLexerError::from_code_and_loc(code, loc));
@@ -584,7 +576,6 @@ mod tests {
         assert_eq!(result.unwrap_err(), LexerError::EmptySource);
     }
 
-    #[cfg(feature = "error-location")]
     #[test]
     fn parse_with_location_reports_error_position() {
         let source = "\n  import 'x';";
@@ -598,7 +589,6 @@ mod tests {
         assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
     }
 
-    #[cfg(feature = "error-location")]
     #[test]
     fn parse_with_location_empty_source() {
         let result = parse_commonjs_with_location("");
@@ -612,7 +602,6 @@ mod tests {
         assert_eq!(loc.column, NonZeroU32::new(1).unwrap());
     }
 
-    #[cfg(feature = "error-location")]
     #[test]
     fn parse_with_location_crlf_position() {
         let source = "\r\n  import 'x';";
@@ -626,7 +615,6 @@ mod tests {
         assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
     }
 
-    #[cfg(feature = "error-location")]
     #[test]
     fn parse_with_location_import_meta_and_eof() {
         let import_meta = parse_commonjs_with_location("\n  import.meta.url");
@@ -734,7 +722,7 @@ mod tests {
         assert!(s.contains("99"), "got: {s}");
     }
 
-    #[cfg(all(feature = "std", feature = "error-location"))]
+    #[cfg(feature = "std")]
     #[test]
     fn located_error_display_includes_location() {
         let err = LocatedLexerError {
@@ -766,7 +754,7 @@ mod tests {
         assert_error::<LexerError>();
     }
 
-    #[cfg(all(feature = "std", feature = "error-location"))]
+    #[cfg(feature = "std")]
     #[test]
     fn located_error_is_std_error() {
         fn assert_error<E: std::error::Error>() {}

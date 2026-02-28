@@ -60,7 +60,3 @@ if(MERVE_USE_SIMDUTF)
   target_link_libraries(merve PRIVATE simdutf)
   target_compile_definitions(merve PRIVATE MERVE_USE_SIMDUTF=1)
 endif()
-
-if(MERVE_ENABLE_ERROR_LOCATION)
-  target_compile_definitions(merve PUBLIC MERVE_ENABLE_ERROR_LOCATION=1)
-endif()

@@ -29,12 +29,8 @@ static void merve_error_loc_set(merve_error_loc* out_err,
 
 extern "C" {
 
-merve_analysis merve_parse_commonjs(const char* input, size_t length) {
-  return merve_parse_commonjs_ex(input, length, nullptr);
-}
-
-merve_analysis merve_parse_commonjs_ex(const char* input, size_t length,
-                                       merve_error_loc* out_err) {
+merve_analysis merve_parse_commonjs(const char* input, size_t length,
+                                    merve_error_loc* out_err) {
   merve_error_loc_clear(out_err);
 
   merve_analysis_impl* impl = new (std::nothrow) merve_analysis_impl();

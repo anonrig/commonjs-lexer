@@ -91,12 +91,6 @@ jobs:
             cmake_gen: Ninja
             cmake_flags: "-DMERVE_USE_SIMDUTF=ON -DMERVE_SANITIZE=ON"
             name_suffix: " (simdutf, ASAN)"
-          # Ubuntu with error location tracking
-          - os: ubuntu-22.04
-            cxx: g++-12
-            cmake_gen: Ninja
-            cmake_flags: "-DMERVE_ENABLE_ERROR_LOCATION=ON"
-            name_suffix: " (error-location)"
 
     name: ${{ matrix.os }} ${{ matrix.cxx || 'MSVC' }}${{ matrix.name_suffix || '' }}
     runs-on: ${{ matrix.os }}
@@ -170,22 +164,11 @@ jobs:
         working-directory: rust
         run: cargo clippy -- -D warnings
 
-      - name: Clippy (error-location)
-        working-directory: rust
-        run: cargo clippy --features error-location -- -D warnings
-
       - name: Test
         working-directory: rust
         run: cargo test
 
+
       - name: Test (no default features)
         working-directory: rust
         run: cargo test --no-default-features
-
-      - name: Test (error-location)
-        working-directory: rust
-        run: cargo test --features error-location
-
-      - name: Test (no default features + error-location)
-        working-directory: rust
-        run: cargo test --no-default-features --features error-location

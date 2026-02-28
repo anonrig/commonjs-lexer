@@ -26,8 +26,6 @@ default = ["std"]
 libcpp = []
 # enable allocations
 std = []
-# enable parse error location support
-error-location = []
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]

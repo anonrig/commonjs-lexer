@@ -219,10 +219,6 @@ fn main() {
     build.include(&deps);
     build.cpp(true).std("c++20").warnings(false);
 
-    if env::var_os("CARGO_FEATURE_ERROR_LOCATION").is_some() {
-        build.define("MERVE_ENABLE_ERROR_LOCATION", Some("1"));
-    }
-
     // Target handling
     let target_str = env::var("TARGET").unwrap();
     let target: Vec<String> = target_str.split('-').map(|s| s.into()).collect();

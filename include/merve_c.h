@@ -72,39 +72,32 @@ extern "C" {
 #endif
 
 /**
- * Parse CommonJS source code and extract export information.
+ * Parse CommonJS source code and optionally return error location.
  *
  * The source buffer must remain valid while accessing string_view-backed
  * export names from the returned handle.
  *
- * You must call merve_free() on the returned handle when done.
- *
- * @param input  Pointer to the JavaScript source (need not be null-terminated).
- *               NULL is treated as an empty string.
- * @param length Length of the input in bytes.
- * @return A handle to the parse result, or NULL on out-of-memory.
- *         Use merve_is_valid() to check if parsing succeeded.
- */
-merve_analysis merve_parse_commonjs(const char* input, size_t length);
-
-/**
- * Parse CommonJS source code and optionally return error location.
- *
- * Behaves like merve_parse_commonjs(). If @p out_err is non-NULL, it is always
- * written:
+ * If @p out_err is non-NULL, it is always written:
  * - On success: set to {0, 0}.
  * - On parse failure with known location: set to that location.
  * - On parse failure without available location: set to {0, 0}.
  *
+ * You must call merve_free() on the returned handle when done.
+ *
  * @param input   Pointer to the JavaScript source (need not be
- * null-terminated). NULL is treated as an empty string.
+ *                null-terminated). NULL is treated as an empty string.
  * @param length  Length of the input in bytes.
  * @param out_err Optional output pointer for parse error location.
  * @return A handle to the parse result, or NULL on out-of-memory.
  *         Use merve_is_valid() to check if parsing succeeded.
  */
-merve_analysis merve_parse_commonjs_ex(const char* input, size_t length,
-                                       merve_error_loc* out_err);
+#ifdef __cplusplus
+merve_analysis merve_parse_commonjs(const char* input, size_t length,
+                                    merve_error_loc* out_err = nullptr);
+#else
+merve_analysis merve_parse_commonjs(const char* input, size_t length,
+                                    merve_error_loc* out_err);
+#endif
 
 /**
  * Check whether the parse result is valid (parsing succeeded).
@@ -197,7 +190,7 @@ const char* merve_get_version(void);
 merve_version_components merve_get_version_components(void);
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif
 
 #endif /* MERVE_C_H */

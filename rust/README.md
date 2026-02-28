@@ -46,13 +46,6 @@ Requires `libc++` to be installed:
 merve = { version = "...", features = ["libcpp"] }
 ```
 
-**error-location**: Enables location-aware parse errors via
-`parse_commonjs_with_location`.
-
-```toml
-merve = { version = "...", features = ["error-location"] }
-```
-
 ## API
 
 ### `parse_commonjs`
@@ -65,7 +58,7 @@ Parse CommonJS source code and extract export information. The returned
 `Analysis` borrows from `source` because export names may point directly into
 the source buffer (zero-copy).
 
-### `parse_commonjs_with_location` (`error-location` feature)
+### `parse_commonjs_with_location`
 
 ```rust
 pub fn parse_commonjs_with_location(
@@ -118,7 +111,7 @@ Returned when the input contains ESM syntax or malformed constructs:
 
 `LexerError` implements `Display` and, with the `std` feature, `std::error::Error`.
 
-### `LocatedLexerError` (`error-location` feature)
+### `LocatedLexerError`
 
 ```rust
 pub struct LocatedLexerError {

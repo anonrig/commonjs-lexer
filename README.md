@@ -139,7 +139,7 @@ const std::optional<error_location>& get_last_error_location();
 ```
 
 Returns the location of the last parse error, if available. Location tracking
-is enabled when built with `MERVE_ENABLE_ERROR_LOCATION`.
+is best-effort and may be unavailable.
 
 ### `lexer::error_location`
 
@@ -165,8 +165,7 @@ int main(void) {
   const char* source = "exports.foo = 1;\nexports.bar = 2;\n";
 
   merve_error_loc err_loc = {0, 0};
-  merve_analysis result = merve_parse_commonjs_ex(
-      source, strlen(source), &err_loc);
+  merve_analysis result = merve_parse_commonjs(source, strlen(source), &err_loc);
 
   if (merve_is_valid(result)) {
     size_t count = merve_get_exports_count(result);
@@ -210,8 +209,7 @@ Found 2 exports:
 
 | Function | Description |
 |----------|-------------|
-| `merve_parse_commonjs(input, length)` | Parse CommonJS source. Returns a handle (NULL only on OOM). |
-| `merve_parse_commonjs_ex(input, length, out_err)` | Parse CommonJS source and optionally fill error location. |
+| `merve_parse_commonjs(input, length, out_err)` | Parse CommonJS source and optionally fill error location. Returns a handle (NULL only on OOM). |
 | `merve_is_valid(result)` | Check if parsing succeeded. NULL-safe. |
 | `merve_free(result)` | Free a parse result. NULL-safe. |
 | `merve_get_exports_count(result)` | Number of named exports found. |
@@ -224,8 +222,8 @@ Found 2 exports:
 | `merve_get_version()` | Version string (e.g. `"1.0.1"`). |
 | `merve_get_version_components()` | Version as `{major, minor, revision}`. |
 
-Build with `-DMERVE_ENABLE_ERROR_LOCATION=ON` to enable non-zero locations
-from `merve_parse_commonjs_ex`.
+On parse failure, `merve_parse_commonjs` writes a non-zero location when
+`out_err` is non-NULL and the location is available.
 
 #### Error Constants
 
@@ -373,7 +371,6 @@ ctest --test-dir build
 | `MERVE_TESTING` | `ON` | Build test suite |
 | `MERVE_BENCHMARKS` | `OFF` | Build benchmarks |
 | `MERVE_USE_SIMDUTF` | `OFF` | Use simdutf for optimized string operations |
-| `MERVE_ENABLE_ERROR_LOCATION` | `OFF` | Track parse error source locations |
 | `MERVE_SANITIZE` | `OFF` | Enable address sanitizer |
 
 ### Building with simdutf

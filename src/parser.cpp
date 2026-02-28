@@ -314,7 +314,6 @@ struct StarExportBinding {
 thread_local std::optional<lexer_error> last_error;
 thread_local std::optional<error_location> last_error_location;
 
-#ifdef MERVE_ENABLE_ERROR_LOCATION
 static error_location makeErrorLocation(const char* source, const char* end, const char* at) {
   const char* target = at;
   if (target < source) target = source;
@@ -347,7 +346,6 @@ static error_location makeErrorLocation(const char* source, const char* end, con
   loc.column = column;
   return loc;
 }
-#endif
 
 // Lexer state class
 class CJSLexer {
@@ -523,12 +521,8 @@ private:
   void syntaxError(lexer_error code, const char* at = nullptr) {
     if (!last_error) {
       last_error = code;
-#ifdef MERVE_ENABLE_ERROR_LOCATION
       const char* error_pos = at ? at : pos;
       last_error_location = makeErrorLocation(source, end, error_pos);
-#else
-      (void)at;
-#endif
     }
     pos = end + 1;
   }

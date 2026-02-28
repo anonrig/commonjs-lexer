@@ -1,7 +1,6 @@
 option(MERVE_LOGGING "verbose output (useful for debugging)" OFF)
 option(MERVE_SANITIZE "Sanitize addresses" OFF)
 option(MERVE_USE_SIMDUTF "Use simdutf for optimized string operations" OFF)
-option(MERVE_ENABLE_ERROR_LOCATION "Track parse error source locations" OFF)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   option(MERVE_SANITIZE_BOUNDS_STRICT "Sanitize bounds (strict): only for GCC" OFF)
 endif()

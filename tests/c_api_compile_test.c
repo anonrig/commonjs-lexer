@@ -28,9 +28,9 @@ static void check_types(void) {
   loc.column = 0;
   (void)loc;
 
-  merve_analysis (*parse_ex)(const char*, size_t, merve_error_loc*) =
-      &merve_parse_commonjs_ex;
-  (void)parse_ex;
+  merve_analysis (*parse_fn)(const char*, size_t, merve_error_loc*) =
+      &merve_parse_commonjs;
+  (void)parse_fn;
 
   /* Verify the error constants are valid integer constant expressions. */
   int errors[] = {

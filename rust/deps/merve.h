@@ -192,8 +192,7 @@ const std::optional<lexer_error>& get_last_error();
  *
  * @note This is global state and may be overwritten by subsequent calls
  *       to parse_commonjs().
- * @note Location tracking is enabled when built with
- *       MERVE_ENABLE_ERROR_LOCATION.
+ * @note Location tracking is best-effort and may be unavailable.
  */
 const std::optional<error_location>& get_last_error_location();
 

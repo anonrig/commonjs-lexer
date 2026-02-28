@@ -25,7 +25,6 @@ pub struct merve_version_components {
     pub revision: c_int,
 }
 
-#[cfg(feature = "error-location")]
 #[repr(C)]
 pub struct merve_error_loc {
     pub line: u32,
@@ -33,9 +32,7 @@ pub struct merve_error_loc {
 }
 
 unsafe extern "C" {
-    pub fn merve_parse_commonjs(input: *const c_char, length: usize) -> merve_analysis;
-    #[cfg(feature = "error-location")]
-    pub fn merve_parse_commonjs_ex(
+    pub fn merve_parse_commonjs(
         input: *const c_char,
         length: usize,
         out_err: *mut merve_error_loc,
