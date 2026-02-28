@@ -42,12 +42,11 @@ enum lexer_error {
  * @brief Source location information for a parse error.
  *
  * - line and column are 1-based.
- * - offset is 0-based and measured in bytes from the start of input.
+ * - column is byte-oriented.
  */
 struct error_location {
   uint32_t line;
   uint32_t column;
-  size_t offset;
 };
 
 /**

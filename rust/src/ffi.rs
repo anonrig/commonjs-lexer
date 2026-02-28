@@ -30,7 +30,6 @@ pub struct merve_version_components {
 pub struct merve_error_loc {
     pub line: u32,
     pub column: u32,
-    pub offset: usize,
 }
 
 unsafe extern "C" {

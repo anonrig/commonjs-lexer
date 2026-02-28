@@ -18,7 +18,6 @@ static void merve_error_loc_clear(merve_error_loc* out_err) {
   if (!out_err) return;
   out_err->line = 0;
   out_err->column = 0;
-  out_err->offset = 0;
 }
 
 static void merve_error_loc_set(merve_error_loc* out_err,
@@ -26,7 +25,6 @@ static void merve_error_loc_set(merve_error_loc* out_err,
   if (!out_err) return;
   out_err->line = loc.line;
   out_err->column = loc.column;
-  out_err->offset = loc.offset;
 }
 
 extern "C" {

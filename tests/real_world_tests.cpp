@@ -1005,7 +1005,6 @@ TEST(real_world_tests, error_location_state_resets_after_success) {
   ASSERT_TRUE(loc_after_error.has_value());
   ASSERT_EQ(loc_after_error->line, 2u);
   ASSERT_EQ(loc_after_error->column, 3u);
-  ASSERT_EQ(loc_after_error->offset, 3u);
 #else
   ASSERT_FALSE(loc_after_error.has_value());
 #endif
@@ -1027,7 +1026,6 @@ TEST(real_world_tests, error_location_crlf_line_counting) {
   ASSERT_TRUE(loc.has_value());
   ASSERT_EQ(loc->line, 2u);
   ASSERT_EQ(loc->column, 3u);
-  ASSERT_EQ(loc->offset, 4u);
 #else
   ASSERT_FALSE(loc.has_value());
 #endif
@@ -1044,7 +1042,6 @@ TEST(real_world_tests, error_location_import_meta_and_eof) {
   ASSERT_TRUE(import_meta_loc.has_value());
   ASSERT_EQ(import_meta_loc->line, 2u);
   ASSERT_EQ(import_meta_loc->column, 3u);
-  ASSERT_EQ(import_meta_loc->offset, 3u);
 #else
   ASSERT_FALSE(import_meta_loc.has_value());
 #endif
@@ -1058,7 +1055,6 @@ TEST(real_world_tests, error_location_import_meta_and_eof) {
   ASSERT_TRUE(eof_loc.has_value());
   ASSERT_EQ(eof_loc->line, 1u);
   ASSERT_EQ(eof_loc->column, 7u);
-  ASSERT_EQ(eof_loc->offset, 6u);
 #else
   ASSERT_FALSE(eof_loc.has_value());
 #endif

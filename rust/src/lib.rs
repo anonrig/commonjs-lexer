@@ -112,7 +112,7 @@ impl fmt::Display for LexerError {
 #[cfg(feature = "std")]
 impl std::error::Error for LexerError {}
 
-/// 1-based error position with a 0-based byte offset.
+/// 1-based error position.
 #[cfg(feature = "error-location")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ErrorLocation {
@@ -120,8 +120,6 @@ pub struct ErrorLocation {
     pub line: NonZeroU32,
     /// 1-based column number (byte-oriented).
     pub column: NonZeroU32,
-    /// 0-based UTF-8 byte offset from the start of input.
-    pub offset: usize,
 }
 
 #[cfg(feature = "error-location")]
@@ -131,7 +129,6 @@ impl ErrorLocation {
         Some(Self {
             line: NonZeroU32::new(loc.line)?,
             column: NonZeroU32::new(loc.column)?,
-            offset: loc.offset,
         })
     }
 }
@@ -168,8 +165,8 @@ impl fmt::Display for LocatedLexerError {
         if let Some(loc) = self.location {
             write!(
                 f,
-                "{} at line {}, column {} (byte offset {})",
-                self.kind, loc.line, loc.column, loc.offset
+                "{} at line {}, column {}",
+                self.kind, loc.line, loc.column
             )
         } else {
             write!(f, "{}", self.kind)
@@ -463,16 +460,11 @@ pub fn parse_commonjs_with_location(source: &str) -> Result<Analysis<'_>, Locate
             location: Some(ErrorLocation {
                 line: NonZeroU32::new(1).expect("1 is non-zero"),
                 column: NonZeroU32::new(1).expect("1 is non-zero"),
-                offset: 0,
             }),
         });
     }
 
-    let mut loc = ffi::merve_error_loc {
-        line: 0,
-        column: 0,
-        offset: 0,
-    };
+    let mut loc = ffi::merve_error_loc { line: 0, column: 0 };
 
     let handle =
         unsafe { ffi::merve_parse_commonjs_ex(source.as_ptr().cast(), source.len(), &mut loc) };
@@ -604,7 +596,6 @@ mod tests {
         let loc = err.location.expect("location should be present");
         assert_eq!(loc.line, NonZeroU32::new(2).unwrap());
         assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
-        assert_eq!(loc.offset, 3);
     }
 
     #[cfg(feature = "error-location")]
@@ -619,7 +610,6 @@ mod tests {
             .expect("empty source location should be present");
         assert_eq!(loc.line, NonZeroU32::new(1).unwrap());
         assert_eq!(loc.column, NonZeroU32::new(1).unwrap());
-        assert_eq!(loc.offset, 0);
     }
 
     #[cfg(feature = "error-location")]
@@ -634,7 +624,6 @@ mod tests {
         let loc = err.location.expect("location should be present");
         assert_eq!(loc.line, NonZeroU32::new(2).unwrap());
         assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
-        assert_eq!(loc.offset, 4);
     }
 
     #[cfg(feature = "error-location")]
@@ -649,7 +638,6 @@ mod tests {
             .expect("import.meta location should be present");
         assert_eq!(import_meta_loc.line, NonZeroU32::new(2).unwrap());
         assert_eq!(import_meta_loc.column, NonZeroU32::new(3).unwrap());
-        assert_eq!(import_meta_loc.offset, 3);
 
         let eof = parse_commonjs_with_location("(a + b");
         assert!(eof.is_err());
@@ -660,7 +648,6 @@ mod tests {
             .expect("unterminated paren location should be present");
         assert_eq!(eof_loc.line, NonZeroU32::new(1).unwrap());
         assert_eq!(eof_loc.column, NonZeroU32::new(7).unwrap());
-        assert_eq!(eof_loc.offset, 6);
     }
 
     #[test]
@@ -755,13 +742,12 @@ mod tests {
             location: Some(ErrorLocation {
                 line: NonZeroU32::new(2).unwrap(),
                 column: NonZeroU32::new(4).unwrap(),
-                offset: 9,
             }),
         };
         let s = format!("{err}");
         assert!(s.contains("line 2"), "got: {s}");
         assert!(s.contains("column 4"), "got: {s}");
-        assert!(s.contains("offset 9"), "got: {s}");
+        assert!(!s.contains("offset"), "got: {s}");
     }
 
     #[test]

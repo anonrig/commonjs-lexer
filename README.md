@@ -146,8 +146,7 @@ is enabled when built with `MERVE_ENABLE_ERROR_LOCATION`.
 ```cpp
 struct error_location {
   uint32_t line;    // 1-based
-  uint32_t column;  // 1-based
-  size_t offset;    // 0-based byte offset
+  uint32_t column;  // 1-based (byte-oriented)
 };
 ```
 
@@ -165,7 +164,7 @@ merve provides a C API (`merve_c.h`) for use from C programs, FFI bindings, or a
 int main(void) {
   const char* source = "exports.foo = 1;\nexports.bar = 2;\n";
 
-  merve_error_loc err_loc = {0, 0, 0};
+  merve_error_loc err_loc = {0, 0};
   merve_analysis result = merve_parse_commonjs_ex(
       source, strlen(source), &err_loc);
 
@@ -180,8 +179,7 @@ int main(void) {
   } else {
     printf("Parse error: %d\n", merve_get_last_error());
     if (err_loc.line != 0) {
-      printf("  at line %u, column %u (byte offset %zu)\n",
-             err_loc.line, err_loc.column, err_loc.offset);
+      printf("  at line %u, column %u\n", err_loc.line, err_loc.column);
     }
   }
 
@@ -206,7 +204,7 @@ Found 2 exports:
 | `merve_string` | Non-owning string reference (`data` + `length`). Not null-terminated. |
 | `merve_analysis` | Opaque handle to a parse result. Must be freed with `merve_free()`. |
 | `merve_version_components` | Struct with `major`, `minor`, `revision` fields. |
-| `merve_error_loc` | Error location (`line`, `column`, `offset`). `{0,0,0}` means unavailable. |
+| `merve_error_loc` | Error location (`line`, `column`). `{0,0}` means unavailable. |
 
 #### Functions
 

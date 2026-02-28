@@ -345,7 +345,6 @@ static error_location makeErrorLocation(const char* source, const char* end, con
   error_location loc{};
   loc.line = line;
   loc.column = column;
-  loc.offset = static_cast<size_t>(target - source);
   return loc;
 }
 #endif

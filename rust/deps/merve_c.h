@@ -43,14 +43,13 @@ typedef struct {
  * @brief Source location for a parse error.
  *
  * - line and column are 1-based.
- * - offset is 0-based and measured in bytes from the start of input.
+ * - column is byte-oriented.
  *
- * A zeroed location (`{0, 0, 0}`) means the location is unavailable.
+ * A zeroed location (`{0, 0}`) means the location is unavailable.
  */
 typedef struct {
   uint32_t line;
   uint32_t column;
-  size_t offset;
 } merve_error_loc;
 
 /* Error codes corresponding to lexer::lexer_error values. */
@@ -93,9 +92,9 @@ merve_analysis merve_parse_commonjs(const char* input, size_t length);
  *
  * Behaves like merve_parse_commonjs(). If @p out_err is non-NULL, it is always
  * written:
- * - On success: set to {0, 0, 0}.
+ * - On success: set to {0, 0}.
  * - On parse failure with known location: set to that location.
- * - On parse failure without available location: set to {0, 0, 0}.
+ * - On parse failure without available location: set to {0, 0}.
  *
  * @param input   Pointer to the JavaScript source (need not be
  * null-terminated). NULL is treated as an empty string.

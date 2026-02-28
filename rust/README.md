@@ -74,7 +74,7 @@ pub fn parse_commonjs_with_location(
 ```
 
 Like `parse_commonjs`, but returns a `LocatedLexerError` that includes
-`kind: LexerError` plus optional location (`line`, `column`, `offset`).
+`kind: LexerError` plus optional location (`line`, `column`).
 
 ### `Analysis<'a>`
 
@@ -127,7 +127,7 @@ pub struct LocatedLexerError {
 }
 ```
 
-`ErrorLocation` uses 1-based `line`/`column` and 0-based byte `offset`.
+`ErrorLocation` uses 1-based `line`/`column` (byte-oriented column).
 
 ### Versioning helpers
 
