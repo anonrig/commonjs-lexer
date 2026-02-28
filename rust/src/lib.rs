@@ -377,10 +377,8 @@ impl ExactSizeIterator for ExportIter<'_, '_> {}
 ///
 /// # Errors
 ///
-/// Returns a [`LexerError`] if the input contains ESM syntax or other
+/// Returns a [`LocatedLexerError`] if the input contains ESM syntax or other
 /// unsupported constructs.
-///
-/// Use [`parse_commonjs_with_location`] for location-aware errors.
 ///
 /// # Examples
 ///
@@ -408,44 +406,7 @@ impl ExactSizeIterator for ExportIter<'_, '_> {}
 ///     let _ = leaked;
 /// }
 /// ```
-pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError> {
-    if source.is_empty() {
-        return Err(LexerError::EmptySource);
-    }
-    let handle = unsafe {
-        ffi::merve_parse_commonjs(source.as_ptr().cast(), source.len(), core::ptr::null_mut())
-    };
-    if handle.is_null() {
-        // NULL means allocation failure; map to a generic error
-        let code = unsafe { ffi::merve_get_last_error() };
-        return Err(if code >= 0 {
-            LexerError::from_code(code)
-        } else {
-            LexerError::Unknown(code)
-        });
-    }
-    if !unsafe { ffi::merve_is_valid(handle) } {
-        let code = unsafe { ffi::merve_get_last_error() };
-        let err = if code >= 0 {
-            LexerError::from_code(code)
-        } else {
-            LexerError::Unknown(code)
-        };
-        unsafe { ffi::merve_free(handle) };
-        return Err(err);
-    }
-    Ok(Analysis {
-        handle,
-        _source: PhantomData,
-    })
-}
-
-/// Parse CommonJS source and return location-aware errors.
-///
-/// # Errors
-///
-/// Returns [`LocatedLexerError`] on parse failure. Location data is optional.
-pub fn parse_commonjs_with_location(source: &str) -> Result<Analysis<'_>, LocatedLexerError> {
+pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LocatedLexerError> {
     if source.is_empty() {
         return Err(LocatedLexerError {
             kind: LexerError::EmptySource,
@@ -557,7 +518,7 @@ mod tests {
         let result = parse_commonjs(source);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert_eq!(err, LexerError::UnexpectedEsmImport);
+        assert_eq!(err.kind, LexerError::UnexpectedEsmImport);
     }
 
     #[test]
@@ -566,32 +527,12 @@ mod tests {
         let result = parse_commonjs(source);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert_eq!(err, LexerError::UnexpectedEsmExport);
+        assert_eq!(err.kind, LexerError::UnexpectedEsmExport);
     }
 
     #[test]
     fn empty_input() {
         let result = parse_commonjs("");
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), LexerError::EmptySource);
-    }
-
-    #[test]
-    fn parse_with_location_reports_error_position() {
-        let source = "\n  import 'x';";
-        let result = parse_commonjs_with_location(source);
-        assert!(result.is_err());
-
-        let err = result.unwrap_err();
-        assert_eq!(err.kind, LexerError::UnexpectedEsmImport);
-        let loc = err.location.expect("location should be present");
-        assert_eq!(loc.line, NonZeroU32::new(2).unwrap());
-        assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
-    }
-
-    #[test]
-    fn parse_with_location_empty_source() {
-        let result = parse_commonjs_with_location("");
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert_eq!(err.kind, LexerError::EmptySource);
@@ -603,9 +544,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_with_location_crlf_position() {
-        let source = "\r\n  import 'x';";
-        let result = parse_commonjs_with_location(source);
+    fn parse_reports_error_position() {
+        let source = "\n  import 'x';";
+        let result = parse_commonjs(source);
         assert!(result.is_err());
 
         let err = result.unwrap_err();
@@ -616,8 +557,21 @@ mod tests {
     }
 
     #[test]
-    fn parse_with_location_import_meta_and_eof() {
-        let import_meta = parse_commonjs_with_location("\n  import.meta.url");
+    fn parse_crlf_position() {
+        let source = "\r\n  import 'x';";
+        let result = parse_commonjs(source);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, LexerError::UnexpectedEsmImport);
+        let loc = err.location.expect("location should be present");
+        assert_eq!(loc.line, NonZeroU32::new(2).unwrap());
+        assert_eq!(loc.column, NonZeroU32::new(3).unwrap());
+    }
+
+    #[test]
+    fn parse_import_meta_and_eof() {
+        let import_meta = parse_commonjs("\n  import.meta.url");
         assert!(import_meta.is_err());
         let import_meta_err = import_meta.unwrap_err();
         assert_eq!(import_meta_err.kind, LexerError::UnexpectedEsmImportMeta);
@@ -627,7 +581,7 @@ mod tests {
         assert_eq!(import_meta_loc.line, NonZeroU32::new(2).unwrap());
         assert_eq!(import_meta_loc.column, NonZeroU32::new(3).unwrap());
 
-        let eof = parse_commonjs_with_location("(a + b");
+        let eof = parse_commonjs("(a + b");
         assert!(eof.is_err());
         let eof_err = eof.unwrap_err();
         assert_eq!(eof_err.kind, LexerError::UnterminatedParen);

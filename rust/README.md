@@ -51,23 +51,12 @@ merve = { version = "...", features = ["libcpp"] }
 ### `parse_commonjs`
 
 ```rust
-pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LexerError>
+pub fn parse_commonjs(source: &str) -> Result<Analysis<'_>, LocatedLexerError>
 ```
 
 Parse CommonJS source code and extract export information. The returned
 `Analysis` borrows from `source` because export names may point directly into
 the source buffer (zero-copy).
-
-### `parse_commonjs_with_location`
-
-```rust
-pub fn parse_commonjs_with_location(
-    source: &str,
-) -> Result<Analysis<'_>, LocatedLexerError>
-```
-
-Like `parse_commonjs`, but returns a `LocatedLexerError` that includes
-`kind: LexerError` plus optional location (`line`, `column`).
 
 ### `Analysis<'a>`
 
